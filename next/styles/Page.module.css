@@ -1,0 +1,103 @@
+.page {
+  display: grid;
+  grid-template-columns: 200px 1fr;
+}
+
+.placeholder {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.sidebar {
+  border: 1px solid;
+}
+
+.game {
+  display: grid;
+  grid-template-columns: minmax(0, 4fr) minmax(0, 1fr);
+  height: 100vh;
+  max-height: 100vh;
+}
+
+.gameBoard {
+  display: flex;
+  justify-content: center;
+  max-height: 100%
+}
+
+.boardAndTimers {
+  display: flex;
+  justify-content: center;
+}
+
+.timers {
+  display: grid;
+  grid-template-rows: 150px 1fr 150px;
+  grid-template-columns: 200px;
+  border: 1px solid;
+}
+
+.boardContainer {
+  aspect-ratio: 1 / 1;
+  height: 100%;
+}
+
+.board {
+  display: grid;
+  grid-template-rows: repeat(9, 1fr);
+  grid-template-columns: repeat(9, 1fr);
+}
+
+.square {
+  background: #fff;
+  border: 0px solid #999;
+  float: left;
+  font-size: 24px;
+  font-weight: bold;
+  line-height: 34px;
+  margin-right: -1px;
+  margin-top: -1px;
+  padding: 0;
+  text-align: center;
+  background-image: url('/board_tile.png');
+  background-size: cover;
+  aspect-ratio: 1 / 1;
+}
+
+.utilities {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+}
+
+.history {
+  flex: 1 1 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  border: 1px solid;
+}
+
+.chat {
+  flex: 1 1 0;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  border: 1px solid;
+}
+
+.chatHistory {
+  overflow-y: auto;
+  overflow-x: hidden;
+  list-style: none;
+  flex-grow: 1;
+  padding-left: 0;
+}
+
+.chatMessage {
+}
+
+.chatBox {
+  flex-grow: 0;
+}
