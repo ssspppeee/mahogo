@@ -33,7 +33,7 @@
 
 .timers {
   display: grid;
-  grid-template-rows: 150px 1fr 150px;
+  grid-template-rows: 150px 1fr 50px 150px;
   grid-template-columns: 200px;
   border: 1px solid;
 }

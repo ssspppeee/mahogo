@@ -80,20 +80,33 @@ async function isValid(gameID: string, board: Board, move: Move) {
   return !duplicateState;
 }
 
-async function updateGame(redisPub: any, gameID: string, position: any, board: Board) {
-  redisPub.hset(`${gameID}:history`, board.serialise(), 1);
-  redisPub.rpush(`${gameID}:moves`, position);
-  let blackNext = await redisPub.get(`${gameID}:blackNext`);
-  let newBoardScore;
-  if (blackNext == 1) {
-    newBoardScore = board.updateBoard(new Move(position, Cell.Black));
-    redisPub.set(`${gameID}:blackNext`, 0);
+async function updateGame(redisPub: any, gameID: string, position: any | null, board: Board | null) {
+  if (board === null) {
+    redisPub.rpush(`${gameID}:moves`, "pass");
+    let blackNext = await redisPub.get(`${gameID}:blackNext`);
+    if (blackNext == 1) {
+      redisPub.set(`${gameID}:blackNext`, 0);
+    }
+    else {
+      redisPub.set(`${gameID}:blackNext`, 1);
+    }
+    redisPub.publish(`${gameID}`, JSON.stringify({"type": "pass"}));
   }
   else {
-    newBoardScore = board.updateBoard(new Move(position, Cell.White));
-    redisPub.set(`${gameID}:blackNext`, 1);
+    redisPub.hset(`${gameID}:history`, board.serialise(), 1);
+    redisPub.rpush(`${gameID}:moves`, position);
+    let blackNext = await redisPub.get(`${gameID}:blackNext`);
+    let newBoardScore;
+    if (blackNext == 1) {
+      newBoardScore = board.updateBoard(new Move(position, Cell.Black));
+      redisPub.set(`${gameID}:blackNext`, 0);
+    }
+    else {
+      newBoardScore = board.updateBoard(new Move(position, Cell.White));
+      redisPub.set(`${gameID}:blackNext`, 1);
+    }
+    redisPub.publish(`${gameID}`, JSON.stringify({"type": "move", "board": newBoardScore.board.serialise(), "position": position}));
   }
-  redisPub.publish(`${gameID}`, JSON.stringify({"type": "move", "board": newBoardScore.board.serialise(), "position": position}));
 }
 
 async function updateChat(redisPub: any, gameID: string, message: string) {
@@ -132,6 +145,12 @@ wss.on("connection", (ws: WebSocket, req: any) => {
           if (await isValid(msg.gameID, new Board(msg.board), msg.move)) {
             updateGame(redisPub, msg.gameID, msg.move.position, new Board(msg.board));
           }
+        }
+      }
+      else if (msg.type ==="pass") {
+        if ((game.blackNext && ip === game.blackKey) ||
+            (!game.blackNext && ip === game.whiteKey)) {
+          updateGame(redisPub, msg.gameID, null, null);
         }
       }
       else if (msg.type === "message") {

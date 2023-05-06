@@ -147,6 +147,11 @@ function Game({ gameID }: {gameID: string}) {
         setHistory(prevHistory => [...prevHistory.slice(), nextBoard]);
         setCurrentMove(prevMove => prevMove + 1);
       }
+      else if (msg.type === "pass") {
+        setMoveHistory(prevMoveHistory => [...prevMoveHistory.slice(), -1]);
+        setHistory(prevHistory => [...prevHistory.slice(), prevHistory[prevHistory.length-1]]);
+        setCurrentMove(prevMove => prevMove + 1);
+      }
       else if (msg.type === "message") {
         // const nextMessageHistory = [...messageHistory.slice(), msg.message];
         setMessageHistory(prevHistory => [...prevHistory.slice(), msg.message]);
@@ -166,6 +171,13 @@ function Game({ gameID }: {gameID: string}) {
     }));
   }
 
+  function handlePass() {
+    websocket.send(JSON.stringify({
+      gameID: gameID,
+      type: "pass"
+    }))
+  }
+
   function jumpTo(nextMove: number) {
     setCurrentMove(nextMove);
   }
@@ -180,14 +192,17 @@ function Game({ gameID }: {gameID: string}) {
 
   const moves = moveHistory.map((move, idx) => {
     let description;
-    if (move >= 0) {
+    if (idx == 0) {
+      description = "Start";
+    }
+    else if (move >= 0) {
       description = (Math.floor(move / gridSize) + 1) + ", " + ((move % gridSize) + 1);
     }
     else {
-      description = "Start";
+      description = "Pass";
     }
     return (
-      <li key={move}>
+      <li key={idx}>
         <button onClick={() => jumpTo(idx)}>{description}</button>
       </li>
     );
@@ -201,6 +216,7 @@ function Game({ gameID }: {gameID: string}) {
           <div className={styles.timers}>
             <OpponentTimer />
             <div></div>
+            <button className="passButton" onClick={handlePass}>Pass</button>
             <PlayerTimer />
           </div>
         </div>
