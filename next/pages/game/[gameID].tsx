@@ -89,7 +89,7 @@ function Chat({ messageHistory, sendMessage }: {messageHistory: string[], sendMe
   };
 
   const handleKeyDown = (event) => {
-    if (event.key == "Enter") {
+    if (event.key == "Enter" && message.length > 0) {
       console.log(message);
       sendMessage(message);
       setMessage('');
@@ -115,8 +115,7 @@ function Chat({ messageHistory, sendMessage }: {messageHistory: string[], sendMe
         onChange={handleChange}
         onKeyDown={handleKeyDown} 
         value={message} 
-        minLength="1"
-        maxLength="140" 
+        maxLength={140} 
         placeholder="Send a message" 
       /> 
     </div>
