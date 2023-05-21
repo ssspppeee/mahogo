@@ -98,7 +98,7 @@ function Chat({ messageHistory, sendMessage }: {messageHistory: string[], sendMe
 
   const messages = messageHistory.map((message, index) => {
     return (
-      <li className="chatMessage" key={index}>
+      <li className={styles.chatMessage} key={index}>
         <p>{message}</p>
       </li>
     );
