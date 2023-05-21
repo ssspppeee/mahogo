@@ -56,18 +56,6 @@ function Board({
     }
   }
 
-  // const winner = calculateWinner(squares);
-  /*
-  const winner = false;
-  let status;
-  if (winner) {
-    status = "Winner: " + winner;
-  }
-  else {
-    status = "Next player: " + (xIsNext ? "X" : "O");
-  }
-  */
-
   const squares = [...Array(gridSize*gridSize).keys()].map((i) => {
     return <Square key={i} value={board.board[i]} playerMarkedDead={playerMarkedDead[i]} opponentMarkedDead={opponentMarkedDead[i]} onSquareClick={() => handleClick(i)} />
   });
@@ -182,8 +170,6 @@ function Game({ gameID }: {gameID: string}) {
         if (msg.type === "move") {
           let nextBoard = new Go.Board(msg.board.split("").map(Number));
           let position = msg.position;
-          // const nextMoveHistory = [...moveHistory.slice(), position];
-          // const nextHistory = [...history.slice(0, currentMove + 1), nextBoard];
           setMoveHistory(prevMoveHistory => [...prevMoveHistory.slice(), position]);
           setHistory(prevHistory => [...prevHistory.slice(), nextBoard]);
           setCurrentMove(prevMove => prevMove + 1);
@@ -214,7 +200,6 @@ function Game({ gameID }: {gameID: string}) {
         }
         }
         else if (msg.type === "message") {
-          // const nextMessageHistory = [...messageHistory.slice(), msg.message];
           setMessageHistory(prevHistory => [...prevHistory.slice(), msg.message]);
         }
       };
@@ -321,112 +306,3 @@ export default function Page() {
     </div>
   );
 }
-/*
-class GameState {
-  board: (string | null)[];
-  blackScore: number;
-  whiteScore: number;
-  blackNext: boolean;
-
-  constructor(board: (string | null)[], blackScore: number, whiteScore: number, blackNext: boolean) {
-    this.board = board;
-    this.blackScore = blackScore;
-    this.whiteScore = whiteScore;
-    this.blackNext = blackNext;
-  }
-}
-
-function getGroup(board: (string | null)[], position: number): number[] {
-  let group = new Set<number>();
-  let stack: number[] = [position];
-  while (stack.length > 0)  {
-    let p = stack.pop();
-    group.add(p!);
-    getNeighbours(board, p!)
-      .filter(n => board[n] === board[p!])
-      .filter(n => !group.has(n))
-      .forEach(n => { stack.push(n); });
-  }
-  return Array.from(group);
-}
-
-function getNeighbours(board: (string | null)[], position: number): number[] {
-  let boardSize = Math.sqrt(board.length);
-  let neighbours = [];
-  if (position - boardSize >= 0 ) { // UP
-    neighbours.push(position - boardSize);
-  }
-  if (position + boardSize < board.length) { // DOWN
-    neighbours.push(position + boardSize);
-  }
-  if (position % boardSize > 0) { // LEFT
-    neighbours.push(position - 1);
-  }
-  if (position % boardSize < boardSize - 1) { // RIGHT
-    neighbours.push(position + 1);
-  }
-  return neighbours;
-}
-
-function getAdjacentEnemyGroups(board: (string | null)[], position: number): number[][] {
-  return getNeighbours(board, position)
-    .filter(neighbour => board[neighbour] !== null)
-    .filter(neighbour => board[neighbour] !== board[position])
-    .map(neighbour => getGroup(board, neighbour));
-}
-
-function countLiberties(board: (string | null)[], group: number[]): number {
-  return group
-    .map(position => getNeighbours(board, position))
-    .flat()
-    .filter((v, i, a) => a.indexOf(v) === i) // deduplicate
-    .filter(position => board[position] === null)
-    .length;
-}
-
-function groupSize(group: number[]): number {
-  return group.length;
-}
-
-function removeGroup(board: (string | null)[], group: number[]) {
-  group.forEach(position => { board[position] = null; });
-}
-
-function updateBoard(gameState: GameState, position: number): GameState | null {
-  if (gameState.board[position] !== null) {
-    console.log("Invalid move: piece already at position.");
-    return null;
-  }
-  let nextBoard = gameState.board.slice();
-  let nextBlackScore = gameState.blackScore;
-  let nextWhiteScore = gameState.whiteScore;
-  let nextBlackNext = !gameState.blackNext;
-
-  nextBoard[position] = gameState.blackNext ? 'X' : 'O';
-  let adjacentEnemyGroups = getAdjacentEnemyGroups(nextBoard, position);
-  let adjacentGroupDied = false;
-  console.log("Neighbours of ", position, getNeighbours(nextBoard, position));
-  adjacentEnemyGroups.forEach((group) => {
-    console.log("Adjacent enemy groups and liberties:", group, countLiberties(nextBoard, group));
-    if (countLiberties(nextBoard, group) === 0) {
-      adjacentGroupDied = true;
-      if (gameState.blackNext) {
-        nextBlackScore += groupSize(group);
-      }
-      else {
-        nextWhiteScore += groupSize(group);
-      }
-      removeGroup(nextBoard, group);
-    }
-  });
-  if (!adjacentGroupDied) {
-    if (countLiberties(nextBoard, getGroup(nextBoard, position)) === 0) {
-      console.log("Invalid move.");
-      return null;
-    }
-  }
-  return new GameState(nextBoard, nextBlackScore, nextWhiteScore, nextBlackNext);
-    
-}
-*/
-

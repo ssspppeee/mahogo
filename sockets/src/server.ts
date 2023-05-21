@@ -11,8 +11,6 @@ const app = express();
 const server = http.createServer(app);
 const wss = new WebSocket.Server({ server });
 
-// app.use(express.json());
-
 class Game {
   connections: number;
   blackKey: string | null;
@@ -196,32 +194,6 @@ wss.on("connection", (ws: WebSocket, req: any) => {
   }
 });
 
-/*
-wss.on('connection', (ws: WebSocket) => {
-  ws.on('message', (message: string) => {
-    let messageJSON = JSON.parse(message);
-    console.log('received: %s', messageJSON);
-    if (activeGames.has(messageJSON.gameID)) {
-      let game = activeGames.get(messageJSON.gameID);
-      if (messageJSON.playerKey === game.p1key) {
-        console.log("Received p1 move");
-        game.history.push(messageJSON.move);
-        console.log(`History of ${game.id}: ${game.history}`);
-        ws.send(`Played move ${messageJSON.move}. History: ${game.history}`);
-      }
-      else if (messageJSON.playerKey === game.p2key) {
-        console.log("Reeived p2 move");
-        ws.send("Not player 2's turn yet.");
-      }
-      else {
-        console.log("Receive other user move");
-        ws.send("Invalid player key.");
-      }
-    }
-  });
-  ws.send(`Active games: ${Array.from(activeGames.keys())}`);
-});
-*/
 
 server.listen(process.env.PORT || 8999, () => {
   console.log(`Server started :)`);
@@ -230,9 +202,6 @@ server.listen(process.env.PORT || 8999, () => {
 });
 
 function generateGameID(redisPub: Redis) {
-  // TODO
-  // maybe do xkcd-style four-word IDs
-  // return "abcdef";
   const id = new Uint32Array(16);
   const gameID = crypto.randomBytes(8).toString('hex');
   return gameID;
@@ -250,49 +219,3 @@ app.get('/api/createGame', (req, res) => {
   let gameID = generateGame(redisPub);
   res.send(JSON.stringify({"gameID": gameID}));
 })
-
-app.get('/', (req, res) => {
-  console.log("Page accessed");
-  let gameID = generateGame(redisPub);
-  // res.sendFile(path.join(__dirname, "../../../../../frontend/build", "index.html"));
-  res.redirect(`/game/${gameID}`);
-});
-
-app.get("/game/:gameID", (req, res) => {
-  // res.send("tst");
-  res.sendFile(path.join(__dirname, "../../../../../frontend/build", "index.html"));
-});
-
-
-app.use(express.static(path.join(__dirname, "../../../../../frontend/build/")));
-
-/*
-app.get('/', (req, res) => {
-  // create game
-  let game = "abcdef";
-  activeGames.set(game, new Game(game));
-  res.redirect(`/${game}`);
-});
-
-app.get('/:gameId', (req, res) => {
-  const gameId = req.params.gameId;
-  // join game
-  if (!activeGames.has(gameId)) {
-    res.send(`No active game named '${gameId}'`);
-  }
-  else {
-    let game = activeGames.get(gameId);
-    game.connections += 1;
-    if (game.connections === 1) {
-      res.send("p1key");
-    }
-    else if (game.connections === 2) {
-      res.send("p2key");
-    }
-    else {
-      res.send("spectatorkey");
-    }
-  }
-});
-*/
-
