@@ -311,6 +311,9 @@ export default function Page() {
   const router = useRouter();
   console.log(router.query);
   let gameID = router.query.gameID;
+  if (Array.isArray(gameID)) { // router.query.gameID can be string[], apparently
+    return null;
+  }
   return (
     <div className={styles.page}>
       <Sidebar />
