@@ -12,8 +12,10 @@ export default function Home() {
         <h1>
           <button
             type="button"
-            onClick={() => {
-              let gameID = "abcdef";
+            onClick={async () => {
+              let response = await fetch("/api/createGame");
+              let json = await response.json()
+              let gameID = json.gameID;
               router.push({
                 pathname: '/game/[gameID]',
                 query: { gameID: gameID },

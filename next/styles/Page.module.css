@@ -50,6 +50,7 @@
 }
 
 .square {
+  position: relative;
   background: #fff;
   border: 0px solid #999;
   float: left;
@@ -63,6 +64,22 @@
   background-image: url('/board_tile.png');
   background-size: cover;
   aspect-ratio: 1 / 1;
+}
+
+.playerMarkedDead {
+  position: absolute;
+  color: blue;
+  top: 50%;
+  left: 33%;
+  transform: translate(-50%, -50%);
+}
+
+.opponentMarkedDead {
+  position: absolute;
+  color: red;
+  top: 50%;
+  left: 66%;
+  transform: translate(-50%, -50%);
 }
 
 .utilities {

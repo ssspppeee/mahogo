@@ -3,32 +3,56 @@ import { useRouter } from 'next/router';
 import styles from 'styles/Page.module.css';
 import * as Go from "@/lib/Go";
 
-function Square({ value, onSquareClick }: {value: Go.Cell, onSquareClick: () => void}) {
+function Square({ 
+  value, 
+  playerMarkedDead, 
+  opponentMarkedDead, 
+  onSquareClick 
+}: {
+  value: Go.Cell, 
+  playerMarkedDead: boolean, 
+  opponentMarkedDead: boolean, 
+  onSquareClick: () => void
+}) {
   const imgfn = value === Go.Cell.Black ? 'black_piece.png' : (value === Go.Cell.White ? 'white_piece.png' : '');
-  if (imgfn === '') {
-    return (
-      <button className={styles.square} onClick={onSquareClick} />
-    );
-  }
-  else {
-    return (
-      <button className={styles.square} onClick={onSquareClick}>
-        <img src={"/" + imgfn} />
-      </button>
-    );
-  }
+  return (
+    <button className={styles.square} onClick={onSquareClick}>
+      { (imgfn === '') ? null : (<img src={"/" + imgfn} />) }
+      { playerMarkedDead ? (<div className={styles.playerMarkedDead}>X</div>) : null}
+      { opponentMarkedDead ? (<div className={styles.opponentMarkedDead}>X</div>) : null}
+    </button>
+  );
 }
 
-function Board({ xIsNext, board, onPlay, gridSize }: {xIsNext: boolean, board: Go.Board, onPlay: (move: Go.Move) => void, gridSize: number}) {
-
+function Board({ 
+  xIsNext, 
+  markDeadStage,
+  board, 
+  playerMarkedDead, 
+  opponentMarkedDead, 
+  onPlay, 
+  onMarkDead,
+  gridSize 
+}: {
+  xIsNext: boolean, 
+  markDeadStage: boolean,
+  board: Go.Board,
+  playerMarkedDead: boolean[],
+  opponentMarkedDead: boolean[],
+  onPlay: (move: Go.Move) => void, 
+  onMarkDead: (position: number) => void,
+  gridSize: number
+}) {
   function handleClick(position: number) {
-    // if (gameOver()) {
-    //   return;
-    // }
-    const move = new Go.Move(position, xIsNext ? Go.Cell.Black : Go.Cell.White)
-    const nextBoard = board.updateBoard(move);
-    if (nextBoard !== null) {
-      onPlay(move);
+    if (markDeadStage && board.board[position] != Go.Cell.Empty) {
+      onMarkDead(position);
+    }
+    else {
+      const move = new Go.Move(position, xIsNext ? Go.Cell.Black : Go.Cell.White);
+      const nextBoard = board.updateBoard(move);
+      if (nextBoard !== null) {
+        onPlay(move);
+      }
     }
   }
 
@@ -45,7 +69,7 @@ function Board({ xIsNext, board, onPlay, gridSize }: {xIsNext: boolean, board: G
   */
 
   const squares = [...Array(gridSize*gridSize).keys()].map((i) => {
-    return <Square key={i} value={board.board[i]} onSquareClick={() => handleClick(i)} />
+    return <Square key={i} value={board.board[i]} playerMarkedDead={playerMarkedDead[i]} opponentMarkedDead={opponentMarkedDead[i]} onSquareClick={() => handleClick(i)} />
   });
 
   return (
@@ -124,6 +148,11 @@ function Game({ gameID }: {gameID: string}) {
   const xIsNext = currentMove % 2 === 0;
   const currentBoard = history[currentMove];
   const [messageHistory, setMessageHistory] = useState<string[]>([]);
+  const [markDeadStage, setMarkDeadStage] = useState<boolean>(false);
+  const [playerMarkedDead, setPlayerMarkedDead] = useState<boolean[]>(Array(gridSize*gridSize).fill(false));
+  const [opponentMarkedDead, setOpponentMarkedDead] = useState<boolean[]>(Array(gridSize*gridSize).fill(false));
+  const [playerType, setPlayerType] = useState<string>(null);
+
   useEffect(() => {
     const newWebsocket = new WebSocket("ws://localhost:8999");
     newWebsocket.onerror = err => console.error(err);
@@ -138,31 +167,62 @@ function Game({ gameID }: {gameID: string}) {
     newWebsocket.onmessage = (event: any) => {
       console.log(event.data);
       let msg = JSON.parse(event.data);
-      if (msg.type === "move") {
-        let nextBoard = new Go.Board(msg.board.split("").map(Number));
-        let position = msg.position;
-        // const nextMoveHistory = [...moveHistory.slice(), position];
-        // const nextHistory = [...history.slice(0, currentMove + 1), nextBoard];
-        setMoveHistory(prevMoveHistory => [...prevMoveHistory.slice(), position]);
-        setHistory(prevHistory => [...prevHistory.slice(), nextBoard]);
-        setCurrentMove(prevMove => prevMove + 1);
-      }
-      else if (msg.type === "pass") {
-        setMoveHistory(prevMoveHistory => [...prevMoveHistory.slice(), -1]);
-        setHistory(prevHistory => [...prevHistory.slice(), prevHistory[prevHistory.length-1]]);
-        setCurrentMove(prevMove => prevMove + 1);
-      }
-      else if (msg.type === "message") {
-        // const nextMessageHistory = [...messageHistory.slice(), msg.message];
-        setMessageHistory(prevHistory => [...prevHistory.slice(), msg.message]);
-      }
-    };
+      if (msg.type === "setPlayer") {
+        console.log(msg.player);
+        let player = msg.player;
+        setPlayerType(prevPlayer => player);
+      } 
+    }
   }, [gameID]);
 
+  useEffect(() => {
+    if (websocket) {
+      websocket.onmessage = (event: any) => {
+        console.log(event.data);
+        let msg = JSON.parse(event.data);
+        if (msg.type === "move") {
+          let nextBoard = new Go.Board(msg.board.split("").map(Number));
+          let position = msg.position;
+          // const nextMoveHistory = [...moveHistory.slice(), position];
+          // const nextHistory = [...history.slice(0, currentMove + 1), nextBoard];
+          setMoveHistory(prevMoveHistory => [...prevMoveHistory.slice(), position]);
+          setHistory(prevHistory => [...prevHistory.slice(), nextBoard]);
+          setCurrentMove(prevMove => prevMove + 1);
+        }
+        else if (msg.type === "pass") {
+          setMoveHistory(prevMoveHistory => [...prevMoveHistory.slice(), -1]);
+          setHistory(prevHistory => [...prevHistory.slice(), prevHistory[prevHistory.length-1]]);
+          setCurrentMove(prevMove => prevMove + 1);
+        }
+        else if (msg.type === "markDeadStage") {
+          setMarkDeadStage(true);
+        }
+        else if (msg.type === "markGroupDead") {
+          console.log("marking:", msg.group, msg.player, playerType);
+          if (msg.player === playerType) { // TODO: this is closed as null
+            setPlayerMarkedDead(prevPlayerMarkedDead => {
+              let nextPlayerMarkedDead = prevPlayerMarkedDead.slice();
+              msg.group.forEach(position => {nextPlayerMarkedDead[position] = msg.mark});
+              return nextPlayerMarkedDead;
+            });
+        }
+        else {
+            setOpponentMarkedDead(prevOpponentMarkedDead => {
+              let nextOpponentMarkedDead = prevOpponentMarkedDead.slice();
+              msg.group.forEach(position => {nextOpponentMarkedDead[position] = msg.mark});
+              return nextOpponentMarkedDead;
+            });
+        }
+        }
+        else if (msg.type === "message") {
+          // const nextMessageHistory = [...messageHistory.slice(), msg.message];
+          setMessageHistory(prevHistory => [...prevHistory.slice(), msg.message]);
+        }
+      };
+    }
+  }, [playerType]);
+
   function handlePlay(move: Go.Move) {
-    // const nextHistory = [...history.slice(0, currentMove + 1), nextBoard];
-    // setHistory(nextHistory);
-    // setCurrentMove(nextHistory.length - 1);
     websocket.send(JSON.stringify({
       gameID: gameID,
       type: "move",
@@ -176,6 +236,15 @@ function Game({ gameID }: {gameID: string}) {
       gameID: gameID,
       type: "pass"
     }))
+  }
+
+  function handleMarkDead(position: number) {
+    websocket.send(JSON.stringify({
+      gameID: gameID,
+      type: "deadGroup",
+      player: playerType,
+      group: currentBoard.getGroup(position)
+    }));
   }
 
   function jumpTo(nextMove: number) {
@@ -212,7 +281,7 @@ function Game({ gameID }: {gameID: string}) {
     <div className={styles.game}>
       <div className={styles.gameBoard}>
         <div className={styles.boardAndTimers}>
-          <Board xIsNext={xIsNext} board={currentBoard} onPlay={handlePlay} gridSize={gridSize} />
+          <Board xIsNext={xIsNext} markDeadStage={markDeadStage} board={currentBoard} playerMarkedDead={playerMarkedDead} opponentMarkedDead={opponentMarkedDead} onPlay={handlePlay} onMarkDead={handleMarkDead} gridSize={gridSize} />
           <div className={styles.timers}>
             <OpponentTimer />
             <div></div>
