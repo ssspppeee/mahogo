@@ -1,7 +1,8 @@
 import Head from 'next/head';
-import { router } from 'next/router';
+import { useRouter } from 'next/router';
 
 export default function Home() {
+  let router = useRouter();
   return (
     <>
       <Head>
