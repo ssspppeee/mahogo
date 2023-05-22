@@ -275,7 +275,7 @@ function Game({ gameID }: {gameID: string}) {
         </div>
       </div>
       <div className={styles.utilities}>
-	<div className={styles.history}>
+        <div className={styles.history}>
           <ol>{moves}</ol>
         </div>
         <Chat messageHistory={messageHistory} sendMessage={handleChat} />
