@@ -138,6 +138,8 @@ function Game({ gameID }: {gameID: string}) {
   const [markDeadStage, setMarkDeadStage] = useState<boolean>(false);
   const [playerMarkedDead, setPlayerMarkedDead] = useState<boolean[]>(Array(gridSize*gridSize).fill(false));
   const [opponentMarkedDead, setOpponentMarkedDead] = useState<boolean[]>(Array(gridSize*gridSize).fill(false));
+  const [confirmDeadButtonActive, setConfirmDeadButtonActive] = useState<boolean>(false);
+  const [opponentConfirmedDead, setOpponentConfirmedDead] = useState<boolean>(false);
   const [playerType, setPlayerType] = useState<string>(null);
 
   useEffect(() => {
@@ -184,20 +186,32 @@ function Game({ gameID }: {gameID: string}) {
         }
         else if (msg.type === "markGroupDead") {
           console.log("marking:", msg.group, msg.player, playerType);
-          if (msg.player === playerType) { // TODO: this is closed as null
+          if (msg.player === playerType) { 
             setPlayerMarkedDead(prevPlayerMarkedDead => {
               let nextPlayerMarkedDead = prevPlayerMarkedDead.slice();
               msg.group.forEach(position => {nextPlayerMarkedDead[position] = msg.mark});
               return nextPlayerMarkedDead;
             });
+          }
+          else {
+              setOpponentMarkedDead(prevOpponentMarkedDead => {
+                let nextOpponentMarkedDead = prevOpponentMarkedDead.slice();
+                msg.group.forEach(position => {nextOpponentMarkedDead[position] = msg.mark});
+                return nextOpponentMarkedDead;
+              });
+              setConfirmDeadButtonActive(true);
+          }
         }
-        else {
-            setOpponentMarkedDead(prevOpponentMarkedDead => {
-              let nextOpponentMarkedDead = prevOpponentMarkedDead.slice();
-              msg.group.forEach(position => {nextOpponentMarkedDead[position] = msg.mark});
-              return nextOpponentMarkedDead;
-            });
+        else if (msg.type === "confirmDead") {
+          if (msg.player !== playerType) {
+            setOpponentConfirmedDead(true);
+          }
+          else {
+            setConfirmDeadButtonActive(false);
+          }
         }
+        else if (msg.type === "end") {
+          console.log("Game over, score: ", msg.score);
         }
         else if (msg.type === "message") {
           setMessageHistory(prevHistory => [...prevHistory.slice(), msg.message]);
@@ -205,6 +219,20 @@ function Game({ gameID }: {gameID: string}) {
       };
     }
   }, [playerType]);
+
+  useEffect(() => {
+    let flag = true;
+    for (let i=0; i < playerMarkedDead.length; i++) {
+      if (playerMarkedDead[i] != opponentMarkedDead[i]) {
+        flag = false;
+        setConfirmDeadButtonActive(false);
+        break;
+      }
+    }
+    if (true) {
+      setConfirmDeadButtonActive(true);
+    }
+  }, [playerMarkedDead, opponentMarkedDead]);
 
   function handlePlay(move: Go.Move) {
     websocket.send(JSON.stringify({
@@ -226,9 +254,17 @@ function Game({ gameID }: {gameID: string}) {
     websocket.send(JSON.stringify({
       gameID: gameID,
       type: "deadGroup",
-      player: playerType,
+      player: playerType, // TODO: don't let client identify themselves
       group: currentBoard.getGroup(position)
     }));
+  }
+
+  function handleConfirmDead() {
+    websocket.send(JSON.stringify({
+      gameID: gameID,
+      type: "confirmDead",
+      player: playerType
+    }))
   }
 
   function jumpTo(nextMove: number) {
@@ -268,8 +304,10 @@ function Game({ gameID }: {gameID: string}) {
           <Board xIsNext={xIsNext} markDeadStage={markDeadStage} board={currentBoard} playerMarkedDead={playerMarkedDead} opponentMarkedDead={opponentMarkedDead} onPlay={handlePlay} onMarkDead={handleMarkDead} gridSize={gridSize} />
           <div className={styles.timers}>
             <OpponentTimer />
+            { opponentConfirmedDead ? <div>Opponent has confirmed dead stones.</div> : null }
             <div></div>
-            <button className="passButton" onClick={handlePass}>Pass</button>
+            <button className={styles.confirmDeadButton} onClick={handleConfirmDead}>Confirm dead groups</button>
+            <button className={styles.passButton} onClick={handlePass}>Pass</button>
             <PlayerTimer />
           </div>
         </div>

@@ -129,6 +129,31 @@ async function updateDeadGroups(redisPub: Redis, gameID: string, player: string,
   }
 }
 
+async function updateConfirmedDeadGroups(redisPub: Redis, gameID: string, player: string) {
+  let otherPlayer;
+  if (player === "white") {
+    otherPlayer = "black";
+  }
+  else if (player === "black") {
+    otherPlayer = "white";
+  }
+  else {
+    throw `Invalid value for <player>: '${player}'`;
+  }
+  // check if dead stones match
+  if (await redisPub.sintercard(2, `${gameID}:${player}:deadStones`, `${gameID}:${otherPlayer}:deadStones`) === await redisPub.scard(`${gameID}:${player}:deadStones`)) {
+    // check if other player has already confirmed
+    if (await redisPub.get(`${gameID}:${otherPlayer}:confirmedDead`) == "1") {
+      // TODO: score and end the game
+      redisPub.publish(`${gameID}`, JSON.stringify({"type": "end", "score": "idklol"}));
+    }
+    else {
+      redisPub.set(`${gameID}:${player}:confirmedDead`, "1");
+      redisPub.publish(`${gameID}`, JSON.stringify({"type": "confirmDead", "player": player}));
+    }
+  }
+}
+
 async function updateChat(redisPub: Redis, gameID: string, message: string) {
   redisPub.publish(`${gameID}`, JSON.stringify({"type": "message", "message": message}));
 }
@@ -181,6 +206,9 @@ wss.on("connection", (ws: WebSocket, req: any) => {
             (ip === game.whiteKey && msg.player === "white")) {
           updateDeadGroups(redisPub, msg.gameID, msg.player, msg.group);
         }
+      }
+      else if (msg.type === "confirmDead" && game.markDeadStage) {
+        updateConfirmedDeadGroups(redisPub, msg.gameID, msg.player);
       }
       else if (msg.type === "message") {
         updateChat(redisPub, msg.gameID, msg.message);
