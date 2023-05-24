@@ -126,7 +126,7 @@ export class Board {
           group
             .map(p => finalBoard.getNeighbours(p))
             .flat()
-            .map(position => this.board[position])
+            .map(position => finalBoard.board[position])
             .filter(a => a !== Cell.Empty)
         );
         group.forEach(position => {
