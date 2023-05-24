@@ -3,51 +3,62 @@ import { useRouter } from 'next/router';
 import styles from 'styles/Page.module.css';
 import * as Go from "@/lib/Go";
 
+enum GameStage {
+  Play,
+  MarkDead,
+  End
+}
+
 function Square({ 
   value, 
   playerMarkedDead, 
   opponentMarkedDead, 
+  territory,
   onSquareClick 
 }: {
   value: Go.Cell, 
   playerMarkedDead: boolean, 
   opponentMarkedDead: boolean, 
+  territory: Go.Cell,
   onSquareClick: () => void
 }) {
   const imgfn = value === Go.Cell.Black ? 'black_piece.png' : (value === Go.Cell.White ? 'white_piece.png' : '');
   return (
     <button className={styles.square} onClick={onSquareClick}>
       { (imgfn === '') ? null : (<img src={"/" + imgfn} />) }
-      { playerMarkedDead ? (<div className={styles.playerMarkedDead}>X</div>) : null}
-      { opponentMarkedDead ? (<div className={styles.opponentMarkedDead}>X</div>) : null}
+      { playerMarkedDead ? (<div className={styles.playerMarkedDead}>X</div>) : null }
+      { opponentMarkedDead ? (<div className={styles.opponentMarkedDead}>X</div>) : null }
+      { (territory === Go.Cell.Empty) ? null : (<div className={territory === Go.Cell.Black ? styles.blackTerritory : styles.whiteTerritory}>o</div>) }
     </button>
   );
 }
 
 function Board({ 
   xIsNext, 
-  markDeadStage,
+  gameStage,
   board, 
   playerMarkedDead, 
   opponentMarkedDead, 
+  territory,
   onPlay, 
   onMarkDead,
   gridSize 
 }: {
   xIsNext: boolean, 
-  markDeadStage: boolean,
+  gameStage: GameStage,
   board: Go.Board,
   playerMarkedDead: boolean[],
   opponentMarkedDead: boolean[],
+  territory: Go.Cell[],
   onPlay: (move: Go.Move) => void, 
   onMarkDead: (position: number) => void,
   gridSize: number
 }) {
   function handleClick(position: number) {
-    if (markDeadStage && board.board[position] != Go.Cell.Empty) {
+    if (gameStage === GameStage.MarkDead && board.board[position] != Go.Cell.Empty) {
       onMarkDead(position);
     }
-    else {
+    else if (gameStage === GameStage.Play) {
       const move = new Go.Move(position, xIsNext ? Go.Cell.Black : Go.Cell.White);
       const nextBoard = board.updateBoard(move);
       if (nextBoard !== null) {
@@ -57,7 +68,7 @@ function Board({
   }
 
   const squares = [...Array(gridSize*gridSize).keys()].map((i) => {
-    return <Square key={i} value={board.board[i]} playerMarkedDead={playerMarkedDead[i]} opponentMarkedDead={opponentMarkedDead[i]} onSquareClick={() => handleClick(i)} />
+    return <Square key={i} value={board.board[i]} playerMarkedDead={playerMarkedDead[i]} opponentMarkedDead={opponentMarkedDead[i]} territory={territory[i]} onSquareClick={() => handleClick(i)} />
   });
 
   return (
@@ -139,11 +150,12 @@ function Game({ gameID }: {gameID: string}) {
   const [blackScore, setBlackScore] = useState<number>(0);
   const [whiteScore, setWhiteScore] = useState<number>(0);
   const [messageHistory, setMessageHistory] = useState<string[]>([]);
-  const [markDeadStage, setMarkDeadStage] = useState<boolean>(false);
+  const [gameStage, setGameStage] = useState<GameStage>(GameStage.Play);
   const [playerMarkedDead, setPlayerMarkedDead] = useState<boolean[]>(Array(gridSize*gridSize).fill(false));
   const [opponentMarkedDead, setOpponentMarkedDead] = useState<boolean[]>(Array(gridSize*gridSize).fill(false));
   const [confirmDeadButtonActive, setConfirmDeadButtonActive] = useState<boolean>(false);
   const [opponentConfirmedDead, setOpponentConfirmedDead] = useState<boolean>(false);
+  const [territory, setTerritory] = useState<Go.Cell[]>(Array(gridSize*gridSize).fill(Go.Cell.Empty));
   const [playerType, setPlayerType] = useState<string>(null);
   let playerScore, opponentScore;
   if (playerType === "black") {
@@ -197,7 +209,7 @@ function Game({ gameID }: {gameID: string}) {
           setCurrentMove(prevMove => prevMove + 1);
         }
         else if (msg.type === "markDeadStage") {
-          setMarkDeadStage(true);
+          setGameStage(GameStage.MarkDead);
         }
         else if (msg.type === "markGroupDead") {
           console.log("marking:", msg.group, msg.player, playerType);
@@ -226,6 +238,8 @@ function Game({ gameID }: {gameID: string}) {
           }
         }
         else if (msg.type === "end") {
+          setGameStage(GameStage.End);
+          setTerritory(msg.territory);
           console.log(`Game over\nBlack:\t${msg.blackScore}\nWhite:\t${msg.whiteScore}`);
         }
         else if (msg.type === "message") {
@@ -316,7 +330,7 @@ function Game({ gameID }: {gameID: string}) {
     <div className={styles.game}>
       <div className={styles.gameBoard}>
         <div className={styles.boardAndTimers}>
-          <Board xIsNext={xIsNext} markDeadStage={markDeadStage} board={currentBoard} playerMarkedDead={playerMarkedDead} opponentMarkedDead={opponentMarkedDead} onPlay={handlePlay} onMarkDead={handleMarkDead} gridSize={gridSize} />
+          <Board xIsNext={xIsNext} gameStage={gameStage} board={currentBoard} playerMarkedDead={playerMarkedDead} opponentMarkedDead={opponentMarkedDead} territory={territory} onPlay={handlePlay} onMarkDead={handleMarkDead} gridSize={gridSize} />
           <div className={styles.timers}>
             <OpponentTimer score={opponentScore} />
             { opponentConfirmedDead ? <div>Opponent has confirmed dead stones.</div> : null }
