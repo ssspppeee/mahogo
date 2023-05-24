@@ -110,18 +110,20 @@ function Chat({ messageHistory, sendMessage }: {messageHistory: string[], sendMe
   );
 }
 
-function PlayerTimer() {
+function PlayerTimer({score}: {score: number}) {
   return (
     <div className={`${styles.playerTimer} ${styles.placeholder}`}>
       <span>player timer</span>
+      <span>{score}</span>
     </div>
   );
 }
 
-function OpponentTimer() {
+function OpponentTimer({score}: {score: number}) {
   return (
     <div className={`${styles.opponentTimer} ${styles.placeholder}`}>
       <span>opponent timer</span>
+      <span>{score}</span>
     </div>
   );
 }
@@ -134,6 +136,8 @@ function Game({ gameID }: {gameID: string}) {
   const [currentMove, setCurrentMove] = useState(0);
   const xIsNext = currentMove % 2 === 0;
   const currentBoard = history[currentMove];
+  const [blackScore, setBlackScore] = useState<number>(0);
+  const [whiteScore, setWhiteScore] = useState<number>(0);
   const [messageHistory, setMessageHistory] = useState<string[]>([]);
   const [markDeadStage, setMarkDeadStage] = useState<boolean>(false);
   const [playerMarkedDead, setPlayerMarkedDead] = useState<boolean[]>(Array(gridSize*gridSize).fill(false));
@@ -141,6 +145,15 @@ function Game({ gameID }: {gameID: string}) {
   const [confirmDeadButtonActive, setConfirmDeadButtonActive] = useState<boolean>(false);
   const [opponentConfirmedDead, setOpponentConfirmedDead] = useState<boolean>(false);
   const [playerType, setPlayerType] = useState<string>(null);
+  let playerScore, opponentScore;
+  if (playerType === "black") {
+    playerScore = blackScore;
+    opponentScore = whiteScore;
+  }
+  else if (playerType === "white") {
+    playerScore = whiteScore;
+    opponentScore = blackScore;
+  }
 
   useEffect(() => {
     const newWebsocket = new WebSocket("ws://localhost:8999");
@@ -174,6 +187,8 @@ function Game({ gameID }: {gameID: string}) {
           let position = msg.position;
           setMoveHistory(prevMoveHistory => [...prevMoveHistory.slice(), position]);
           setHistory(prevHistory => [...prevHistory.slice(), nextBoard]);
+          setBlackScore(prevBlackScore => msg.blackScore);
+          setWhiteScore(prevWhiteScore => msg.whiteScore);
           setCurrentMove(prevMove => prevMove + 1);
         }
         else if (msg.type === "pass") {
@@ -211,7 +226,7 @@ function Game({ gameID }: {gameID: string}) {
           }
         }
         else if (msg.type === "end") {
-          console.log("Game over, score: ", msg.score);
+          console.log(`Game over\nBlack:\t${msg.blackScore}\nWhite:\t${msg.whiteScore}`);
         }
         else if (msg.type === "message") {
           setMessageHistory(prevHistory => [...prevHistory.slice(), msg.message]);
@@ -229,7 +244,7 @@ function Game({ gameID }: {gameID: string}) {
         break;
       }
     }
-    if (true) {
+    if (flag) {
       setConfirmDeadButtonActive(true);
     }
   }, [playerMarkedDead, opponentMarkedDead]);
@@ -303,12 +318,12 @@ function Game({ gameID }: {gameID: string}) {
         <div className={styles.boardAndTimers}>
           <Board xIsNext={xIsNext} markDeadStage={markDeadStage} board={currentBoard} playerMarkedDead={playerMarkedDead} opponentMarkedDead={opponentMarkedDead} onPlay={handlePlay} onMarkDead={handleMarkDead} gridSize={gridSize} />
           <div className={styles.timers}>
-            <OpponentTimer />
+            <OpponentTimer score={opponentScore} />
             { opponentConfirmedDead ? <div>Opponent has confirmed dead stones.</div> : null }
             <div></div>
             <button className={styles.confirmDeadButton} onClick={handleConfirmDead}>Confirm dead groups</button>
             <button className={styles.passButton} onClick={handlePass}>Pass</button>
-            <PlayerTimer />
+            <PlayerTimer score={playerScore} />
           </div>
         </div>
       </div>

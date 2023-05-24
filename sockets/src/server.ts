@@ -103,16 +103,27 @@ async function updateGame(redisPub: Redis, gameID: string, position: any | null,
     redisPub.hset(`${gameID}:history`, board.serialise(), 1);
     redisPub.rpush(`${gameID}:moves`, position);
     let blackNext = await redisPub.get(`${gameID}:blackNext`);
-    let newBoardScore;
+    let newBoardScore, blackScore, whiteScore;
     if (blackNext === "1") {
       newBoardScore = board.updateBoard(new Move(position, Cell.Black));
       redisPub.set(`${gameID}:blackNext`, 0);
+      blackScore = redisPub.incrby(`${gameID}:black:score`, newBoardScore.score);
+      whiteScore = redisPub.get(`${gameID}:white:score`);
     }
     else {
       newBoardScore = board.updateBoard(new Move(position, Cell.White));
       redisPub.set(`${gameID}:blackNext`, 1);
+      whiteScore = redisPub.incrby(`${gameID}:white:score`, newBoardScore.score);
+      blackScore = redisPub.get(`${gameID}:black:score`);
     }
-    redisPub.publish(`${gameID}`, JSON.stringify({"type": "move", "board": newBoardScore.board.serialise(), "position": position}));
+    redisPub.set(`${gameID}:board`, newBoardScore.board.serialise());
+    redisPub.publish(`${gameID}`, JSON.stringify({
+      "type": "move", 
+      "board": newBoardScore.board.serialise(), 
+      "position": position, 
+      "blackScore": await blackScore, 
+      "whiteScore": await whiteScore
+    }));
   }
 }
 
@@ -145,7 +156,20 @@ async function updateConfirmedDeadGroups(redisPub: Redis, gameID: string, player
     // check if other player has already confirmed
     if (await redisPub.get(`${gameID}:${otherPlayer}:confirmedDead`) == "1") {
       // TODO: score and end the game
-      redisPub.publish(`${gameID}`, JSON.stringify({"type": "end", "score": "idklol"}));
+      let boardStr = await redisPub.get(`${gameID}:board`);
+      if (boardStr === null) {
+        throw "boardStr is null";
+      }
+      let board = Board.deserialise(boardStr);
+      let deadStonesStr = await redisPub.smembers(`${gameID}:${player}:deadStones`);
+      let deadStones = deadStonesStr.map(Number);
+      let territory = board.getTerritory(deadStones);
+      let blackScore = Number(await redisPub.get(`${gameID}:black:score`));
+      blackScore += territory.filter(a => a === Cell.Black).length;
+      let whiteScore = Number(await redisPub.get(`${gameID}:white:score`));
+      whiteScore += territory.filter(a => a === Cell.White).length;
+      redisPub.publish(`${gameID}`, JSON.stringify({"type": "end", "territory": territory, "blackScore": blackScore, "whiteScore": whiteScore}));
+      // TODO: clean-up and archive
     }
     else {
       redisPub.set(`${gameID}:${player}:confirmedDead`, "1");

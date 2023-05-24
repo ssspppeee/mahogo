@@ -25,6 +25,10 @@ export class Board {
     return this.board.join('');
   }
 
+  static deserialise(str: string): Board {
+    return new Board(str.split('').map(Number));
+  }
+
   getNeighbours(position: number): number[] {
     let boardSize = Math.sqrt(this.board.length);
     let neighbours = [];
@@ -106,6 +110,33 @@ export class Board {
       }
     }
     return { "board": nextBoard, "score": score };
-      
+  }
+
+  getTerritory(deadStones: number[]) {
+    let finalBoard = new Board(this.board.slice());
+    let territory = Array(finalBoard.board.length).fill(Cell.Empty);
+    for (let position of deadStones) {
+      finalBoard.board[position] = Cell.Empty;
+    }
+    let seen = new Set();
+    for (let position = 0; position < finalBoard.board.length; position++) {
+      if (!seen.has(position) && finalBoard.board[position] === Cell.Empty) {
+        let group = finalBoard.getGroup(position);
+        let enclosing = new Set(
+          group
+            .map(p => finalBoard.getNeighbours(p))
+            .flat()
+            .map(position => this.board[position])
+            .filter(a => a !== Cell.Empty)
+        );
+        group.forEach(position => {
+          seen.add(position);
+          if (enclosing.size == 1) {
+            territory[position] = enclosing.has(Cell.Black) ? Cell.Black : Cell.White;
+          }
+        });
+      }
+    }
+    return territory;
   }
 }
