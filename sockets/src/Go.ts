@@ -31,7 +31,7 @@ export class Board {
 
   getNeighbours(position: number): number[] {
     let boardSize = Math.sqrt(this.board.length);
-    let neighbours: number[] = [];
+    let neighbours = [];
     if (position - boardSize >= 0 ) { // UP
       neighbours.push(position - boardSize);
     }

@@ -1,0 +1,35 @@
+services:
+  frontend:
+    build:
+      context: next
+    ports:
+      - 3000:3000
+    networks:
+      - frontend-backend
+    depends_on:
+      - backend
+
+  backend:
+    build:
+      context: sockets
+    ports:
+      - 8998:8998
+    depends_on:
+      - redis
+    networks:
+      - frontend-backend
+      - backend-redis
+    expose: 
+      - 8998
+      - 8999
+  redis:
+    restart: always
+    build:
+      context: redis
+    networks:
+      - backend-redis
+    expose:
+      - 6379
+networks:
+  frontend-backend:
+  backend-redis:

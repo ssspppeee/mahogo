@@ -2,3 +2,5 @@ node_modules/
 sockets/dist/
 dump.rdb
 .next/
+/package-lock.json
+/package.json

@@ -1,5 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useImperativeHandle } from 'react';
 import { useRouter } from 'next/router';
+import { io } from "socket.io-client";
 import styles from 'styles/Page.module.css';
 import * as Go from "@/lib/Go";
 
@@ -168,84 +169,82 @@ function Game({ gameID }: {gameID: string}) {
   }
 
   useEffect(() => {
-    const newWebsocket = new WebSocket("ws://localhost:8999");
-    newWebsocket.onerror = err => console.error(err);
-    newWebsocket.onopen = () => {
-      setWebsocket(newWebsocket);
-      newWebsocket.send(JSON.stringify({
-        "type": "join",
-        "gameID" : gameID
-      }));
-    }
+    const newWebsocket = io("http://localhost:8998");
+    setWebsocket(newWebsocket);
 
-    newWebsocket.onmessage = (event: any) => {
-      console.log(event.data);
-      let msg = JSON.parse(event.data);
-      if (msg.type === "setPlayer") {
-        console.log(msg.player);
-        let player = msg.player;
-        setPlayerType(prevPlayer => player);
-      } 
+    newWebsocket.onAny((eventName, ...args) => {
+      console.log(eventName, ...args);
+    });
+
+    newWebsocket.on("connect_error", (err) => { console.log(err.message) });
+
+    newWebsocket.on("session", () => {
+      // TODO
+    });
+
+    newWebsocket.once("setPlayerType", ({ player }) => {
+      setPlayerType(prevPlayer => player);
+    });
+
+    if (gameID) {
+      newWebsocket.emit("join",
+        gameID
+      );
     }
   }, [gameID]);
 
   useEffect(() => {
     if (websocket) {
-      websocket.onmessage = (event: any) => {
-        console.log(event.data);
-        let msg = JSON.parse(event.data);
-        if (msg.type === "move") {
-          let nextBoard = new Go.Board(msg.board.split("").map(Number));
-          let position = msg.position;
+      websocket.on("move", ({ board, position, blackScore, whiteScore }) => {
+          let nextBoard = new Go.Board(board.split("").map(Number));
           setMoveHistory(prevMoveHistory => [...prevMoveHistory.slice(), position]);
           setHistory(prevHistory => [...prevHistory.slice(), nextBoard]);
-          setBlackScore(prevBlackScore => msg.blackScore);
-          setWhiteScore(prevWhiteScore => msg.whiteScore);
+          setBlackScore(prevBlackScore => blackScore);
+          setWhiteScore(prevWhiteScore => whiteScore);
           setCurrentMove(prevMove => prevMove + 1);
+      });
+      websocket.on("pass", () => {
+        setMoveHistory(prevMoveHistory => [...prevMoveHistory.slice(), -1]);
+        setHistory(prevHistory => [...prevHistory.slice(), prevHistory[prevHistory.length-1]]);
+        setCurrentMove(prevMove => prevMove + 1);
+      });
+      websocket.on("markDeadStage", () => {
+        setGameStage(GameStage.MarkDead);
+      });
+      websocket.on("markGroupDead", ({ player, group, mark }) => {
+        console.log("playerType: ", playerType, "; player: ", player);
+        if (player === playerType) { 
+          setPlayerMarkedDead(prevPlayerMarkedDead => {
+            let nextPlayerMarkedDead = prevPlayerMarkedDead.slice();
+            group.forEach(position => {nextPlayerMarkedDead[position] = mark});
+            return nextPlayerMarkedDead;
+          });
         }
-        else if (msg.type === "pass") {
-          setMoveHistory(prevMoveHistory => [...prevMoveHistory.slice(), -1]);
-          setHistory(prevHistory => [...prevHistory.slice(), prevHistory[prevHistory.length-1]]);
-          setCurrentMove(prevMove => prevMove + 1);
+        else {
+          setOpponentMarkedDead(prevOpponentMarkedDead => {
+            let nextOpponentMarkedDead = prevOpponentMarkedDead.slice();
+            group.forEach(position => {nextOpponentMarkedDead[position] = mark});
+            return nextOpponentMarkedDead;
+          });
+          setConfirmDeadButtonActive(true);
         }
-        else if (msg.type === "markDeadStage") {
-          setGameStage(GameStage.MarkDead);
+      });
+      websocket.on("confirmDead", ({ player }) => {
+        if (player !== playerType) {
+          setOpponentConfirmedDead(true);
         }
-        else if (msg.type === "markGroupDead") {
-          console.log("marking:", msg.group, msg.player, playerType);
-          if (msg.player === playerType) { 
-            setPlayerMarkedDead(prevPlayerMarkedDead => {
-              let nextPlayerMarkedDead = prevPlayerMarkedDead.slice();
-              msg.group.forEach(position => {nextPlayerMarkedDead[position] = msg.mark});
-              return nextPlayerMarkedDead;
-            });
-          }
-          else {
-              setOpponentMarkedDead(prevOpponentMarkedDead => {
-                let nextOpponentMarkedDead = prevOpponentMarkedDead.slice();
-                msg.group.forEach(position => {nextOpponentMarkedDead[position] = msg.mark});
-                return nextOpponentMarkedDead;
-              });
-              setConfirmDeadButtonActive(true);
-          }
+        else {
+          setConfirmDeadButtonActive(false);
         }
-        else if (msg.type === "confirmDead") {
-          if (msg.player !== playerType) {
-            setOpponentConfirmedDead(true);
-          }
-          else {
-            setConfirmDeadButtonActive(false);
-          }
-        }
-        else if (msg.type === "end") {
-          setGameStage(GameStage.End);
-          setTerritory(msg.territory);
-          console.log(`Game over\nBlack:\t${msg.blackScore}\nWhite:\t${msg.whiteScore}`);
-        }
-        else if (msg.type === "message") {
-          setMessageHistory(prevHistory => [...prevHistory.slice(), msg.message]);
-        }
-      };
+      });
+      websocket.on("end", ({ territory, blackScore, whiteScore }) => {
+        setGameStage(GameStage.End);
+        setTerritory(territory);
+        console.log(`Game over\nBlack:\t${blackScore}\nWhite:\t${whiteScore}`);
+      });
+      websocket.on("chatMessage", ({ message }) => {
+        setMessageHistory(prevHistory => [...prevHistory.slice(), message]);
+      });
     }
   }, [playerType]);
 
@@ -264,36 +263,30 @@ function Game({ gameID }: {gameID: string}) {
   }, [playerMarkedDead, opponentMarkedDead]);
 
   function handlePlay(move: Go.Move) {
-    websocket.send(JSON.stringify({
-      gameID: gameID,
-      type: "move",
-      board: currentBoard.board,
-      move: move
-    }));
+    websocket.emit("move",
+      gameID,
+      move
+    );
   }
 
   function handlePass() {
-    websocket.send(JSON.stringify({
-      gameID: gameID,
-      type: "pass"
-    }))
+    websocket.emit("pass",
+      gameID
+    );
   }
 
   function handleMarkDead(position: number) {
-    websocket.send(JSON.stringify({
-      gameID: gameID,
-      type: "deadGroup",
-      player: playerType, // TODO: don't let client identify themselves
-      group: currentBoard.getGroup(position)
-    }));
+    websocket.emit("deadGroup",
+      gameID,
+      currentBoard.getGroup(position)
+    );
   }
 
   function handleConfirmDead() {
-    websocket.send(JSON.stringify({
-      gameID: gameID,
-      type: "confirmDead",
-      player: playerType
-    }))
+    websocket.emit("confirmDead",
+      gameID,
+      playerType
+    );
   }
 
   function jumpTo(nextMove: number) {
@@ -301,11 +294,10 @@ function Game({ gameID }: {gameID: string}) {
   }
 
   function handleChat(message: string) {
-    websocket.send(JSON.stringify({
-      gameID: gameID,
-      type: "message",
-      message: message
-    }));
+    websocket.emit("chatMessage",
+      gameID,
+      message
+    );
   }
 
   const moves = moveHistory.map((move, idx) => {
