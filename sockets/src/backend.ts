@@ -488,7 +488,8 @@ export class RedisBackend extends Backend {
   }
 
   sendChatMessage(gameID: string, player: Player, message: string): void {
-    this.redis.publish(`${gameID}`, JSON.stringify({"type": "chatMessage", "message": message}));
+    let playerString = player === Player.Black ? "black" : "white";
+    this.redis.publish(`${gameID}`, JSON.stringify({"type": "chatMessage", "message": message, "sender": playerString}));
   }
 
   publishPlayerType(gameID: string, userConnection: UserConnection, player: Player): void {

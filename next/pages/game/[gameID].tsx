@@ -10,6 +10,11 @@ enum GameStage {
   End
 }
 
+type ChatMessage = {
+  message: string,
+  sender: string
+}
+
 function Square({ 
   value, 
   playerMarkedDead, 
@@ -23,10 +28,10 @@ function Square({
   territory: Go.Cell,
   onSquareClick: () => void
 }) {
-  const imgfn = value === Go.Cell.Black ? 'black_piece.png' : (value === Go.Cell.White ? 'white_piece.png' : '');
+  const imgfn = value === Go.Cell.Black ? 'black_piece.svg' : (value === Go.Cell.White ? 'white_piece.svg' : '');
   return (
     <button className={styles.square} onClick={onSquareClick}>
-      { (imgfn === '') ? null : (<img src={"/" + imgfn} />) }
+      { (imgfn === '') ? null : (<img className={styles.piece} src={"/" + imgfn} />) }
       { playerMarkedDead ? (<div className={styles.playerMarkedDead}>X</div>) : null }
       { opponentMarkedDead ? (<div className={styles.opponentMarkedDead}>X</div>) : null }
       { (territory === Go.Cell.Empty) ? null : (<div className={territory === Go.Cell.Black ? styles.blackTerritory : styles.whiteTerritory}>o</div>) }
@@ -81,7 +86,7 @@ function Board({
   );
 }
 
-function Chat({ messageHistory, sendMessage }: {messageHistory: string[], sendMessage: (message: string) => void}) {
+function Chat({ messageHistory, sendMessage }: {messageHistory: ChatMessage[], sendMessage: (message: string) => void}) {
   const [message, setMessage] = useState('');
 
   const handleChange = (event) => {
@@ -99,7 +104,7 @@ function Chat({ messageHistory, sendMessage }: {messageHistory: string[], sendMe
   const messages = messageHistory.map((message, index) => {
     return (
       <li className={styles.chatMessage} key={index}>
-        <p>{message}</p>
+        <span className={styles.chatSender}>{'[' + message.sender + "]: "}</span>{message.message}
       </li>
     );
   });
@@ -108,7 +113,7 @@ function Chat({ messageHistory, sendMessage }: {messageHistory: string[], sendMe
     <div className={styles.chat}>
       <ol className={styles.chatHistory}>{messages}</ol>
       <input 
-        className="chatBox"
+        className={styles.chatBox}
         type="text" 
         id="chat" 
         name="chat" 
@@ -124,8 +129,8 @@ function Chat({ messageHistory, sendMessage }: {messageHistory: string[], sendMe
 
 function PlayerTimer({score}: {score: number}) {
   return (
-    <div className={`${styles.playerTimer} ${styles.placeholder}`}>
-      <span>player timer</span>
+    <div className={`${styles.playerTimer} ${styles.timer}`}>
+      <span>--:--</span>
       <span>{score}</span>
     </div>
   );
@@ -133,24 +138,60 @@ function PlayerTimer({score}: {score: number}) {
 
 function OpponentTimer({score}: {score: number}) {
   return (
-    <div className={`${styles.opponentTimer} ${styles.placeholder}`}>
-      <span>opponent timer</span>
+    <div className={`${styles.opponentTimer} ${styles.timer}`}>
+      <span>--:--</span>
       <span>{score}</span>
     </div>
   );
+}
+
+function PassConfirmButton({gameStage, handlePass, handleConfirmDead}: {gameStage: GameStage, handlePass: any, handleConfirmDead: any}) {
+  if (gameStage === GameStage.Play) {
+    return <button className={styles.passButton} onClick={handlePass}>Pass</button>
+  } else {
+    return <button className={styles.confirmDeadButton} onClick={handleConfirmDead}>Confirm dead groups</button>
+  }
+}
+
+function History({moves, gridSize}: {moves: any[], gridSize: number}) {
+  const history = moves
+    .filter((value, idx) => idx % 2 == 0)
+    .map((value, idx) => {
+      let blackIdx = 2*idx + 1;
+      let blackMove = (Math.floor(value / gridSize) + 1) + "-" + ((value % gridSize) + 1);
+      let whiteIdx = 2*idx + 2;
+      let whiteMove;
+      if (whiteIdx <= moves.length) {
+        let whiteValue = moves[whiteIdx-1];
+        whiteMove = (Math.floor(whiteValue / gridSize) + 1) + "-" + ((whiteValue % gridSize) + 1);
+      }
+      return (
+        <div className={styles.historyRow}>
+          <div className={styles.historyIndex}>{blackIdx + '.'}</div>
+          <div className={styles.historyMove}>{blackMove}</div>
+          <div className={styles.historyIndex}>{whiteIdx + '.'}</div>
+          <div className={styles.historyMove}>{whiteMove}</div>
+        </div>
+      )
+    });
+  return (
+    <div className={styles.history}>
+      {history}
+    </div>
+  )
 }
 
 function Game({ gameID }: {gameID: string}) {
   const [websocket, setWebsocket] = useState(null);
   const gridSize = 9;
   const [history, setHistory] = useState<Go.Board[]>([new Go.Board(Array(gridSize*gridSize).fill(Go.Cell.Empty))]);
-  const [moveHistory, setMoveHistory] = useState<number[]>([-1]);
+  const [moveHistory, setMoveHistory] = useState<number[]>([]);
   const [currentMove, setCurrentMove] = useState(0);
   const xIsNext = currentMove % 2 === 0;
   const currentBoard = history[currentMove];
   const [blackScore, setBlackScore] = useState<number>(0);
   const [whiteScore, setWhiteScore] = useState<number>(0);
-  const [messageHistory, setMessageHistory] = useState<string[]>([]);
+  const [messageHistory, setMessageHistory] = useState<ChatMessage[]>([]);
   const [gameStage, setGameStage] = useState<GameStage>(GameStage.Play);
   const [playerMarkedDead, setPlayerMarkedDead] = useState<boolean[]>(Array(gridSize*gridSize).fill(false));
   const [opponentMarkedDead, setOpponentMarkedDead] = useState<boolean[]>(Array(gridSize*gridSize).fill(false));
@@ -242,8 +283,8 @@ function Game({ gameID }: {gameID: string}) {
         setTerritory(territory);
         console.log(`Game over\nBlack:\t${blackScore}\nWhite:\t${whiteScore}`);
       });
-      websocket.on("chatMessage", ({ message }) => {
-        setMessageHistory(prevHistory => [...prevHistory.slice(), message]);
+      websocket.on("chatMessage", ({ message, sender }) => {
+        setMessageHistory(prevHistory => [...prevHistory.slice(), { message, sender }]);
       });
     }
   }, [playerType]);
@@ -300,43 +341,23 @@ function Game({ gameID }: {gameID: string}) {
     );
   }
 
-  const moves = moveHistory.map((move, idx) => {
-    let description;
-    if (idx == 0) {
-      description = "Start";
-    }
-    else if (move >= 0) {
-      description = (Math.floor(move / gridSize) + 1) + ", " + ((move % gridSize) + 1);
-    }
-    else {
-      description = "Pass";
-    }
-    return (
-      <li key={idx}>
-        <button onClick={() => jumpTo(idx)}>{description}</button>
-      </li>
-    );
-  });
-
   return (
     <div className={styles.game}>
       <div className={styles.gameBoard}>
-        <div className={styles.boardAndTimers}>
-          <Board xIsNext={xIsNext} gameStage={gameStage} board={currentBoard} playerMarkedDead={playerMarkedDead} opponentMarkedDead={opponentMarkedDead} territory={territory} onPlay={handlePlay} onMarkDead={handleMarkDead} gridSize={gridSize} />
-          <div className={styles.timers}>
-            <OpponentTimer score={opponentScore} />
-            { opponentConfirmedDead ? <div>Opponent has confirmed dead stones.</div> : null }
-            <div></div>
-            <button className={styles.confirmDeadButton} onClick={handleConfirmDead}>Confirm dead groups</button>
-            <button className={styles.passButton} onClick={handlePass}>Pass</button>
-            <PlayerTimer score={playerScore} />
+        <div className={styles.tableTop}>
+          <div className={styles.boardAndTimers}>
+            <Board xIsNext={xIsNext} gameStage={gameStage} board={currentBoard} playerMarkedDead={playerMarkedDead} opponentMarkedDead={opponentMarkedDead} territory={territory} onPlay={handlePlay} onMarkDead={handleMarkDead} gridSize={gridSize} />
+            <div className={styles.timers}>
+              <OpponentTimer score={opponentScore} />
+              <div></div>
+              <PassConfirmButton gameStage={gameStage} handlePass={handlePass} handleConfirmDead={handleConfirmDead} />
+              <PlayerTimer score={playerScore} />
+            </div>
           </div>
         </div>
       </div>
       <div className={styles.utilities}>
-        <div className={styles.history}>
-          <ol>{moves}</ol>
-        </div>
+        <History moves={moveHistory} gridSize={gridSize} />
         <Chat messageHistory={messageHistory} sendMessage={handleChat} />
       </div>
     </div>

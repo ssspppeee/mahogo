@@ -9,8 +9,17 @@
   align-items: center;
 }
 
+.timer {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background-color: #333333;
+  font-size: xx-large;
+  padding: 10px;
+}
+
 .sidebar {
-  border: 1px solid;
+  background-color: #111111;
 }
 
 .game {
@@ -18,52 +27,86 @@
   grid-template-columns: minmax(0, 4fr) minmax(0, 1fr);
   height: 100vh;
   max-height: 100vh;
+  max-width: 100%;
 }
 
 .gameBoard {
+  border-radius: 15px;
   display: flex;
   justify-content: center;
-  max-height: 100%
+  max-height: 100vh;
+  max-width: 100%;
+}
+
+.tableTop {
+  height: 100%;
+  max-height: 100%;
+  max-width: 100%;
+  display: flex;
+  align-self: flex-start;
 }
 
 .boardAndTimers {
+  margin: 5px;
   display: flex;
   justify-content: center;
 }
 
 .timers {
   display: grid;
-  grid-template-rows: 150px 1fr 50px 150px;
-  grid-template-columns: 200px;
+  grid-template-rows: 4fr 7fr 1fr 4fr;
   border: 1px solid;
 }
 
 .boardContainer {
+  box-sizing: border-box;
   aspect-ratio: 1 / 1;
   height: 100%;
+  background-image: url('/board9x9.svg');
+  background-size: 100% 100%;
+  padding: 0.8%;
 }
 
 .board {
   display: grid;
-  grid-template-rows: repeat(9, 1fr);
-  grid-template-columns: repeat(9, 1fr);
+  grid-template-rows: repeat(9, minmax(0, 1fr));
+  grid-template-columns: repeat(9, minmax(0, 1fr));
+  max-height: 100%;
+  max-width: 100%;
 }
 
 .square {
   position: relative;
-  background: #fff;
   border: 0px solid #999;
   float: left;
-  font-size: 24px;
-  font-weight: bold;
-  line-height: 34px;
-  margin-right: -1px;
-  margin-top: -1px;
-  padding: 0;
-  text-align: center;
-  background-image: url('/board_tile.png');
-  background-size: cover;
-  aspect-ratio: 1 / 1;
+  margin: 1px;
+  padding: 0; 
+  background-color: transparent;
+  /* background-size: cover; */
+  /* aspect-ratio: 1 / 1; */
+}
+
+.passButton {
+  background-color: #333333;
+  border: 0;
+  margin-bottom: 3px;
+  transition: background-color 50ms;
+  color: #eeeeee;
+}
+
+.passButton:hover {
+  background-color: #666666;
+}
+
+.confirmDeadButton {
+  background-color: #333333;
+}
+
+.piece {
+  height: 100%;
+  width: 100%;
+  object-fit: cover;
+  position: relative;
 }
 
 .playerMarkedDead {
@@ -106,18 +149,46 @@
 }
 
 .history {
+  background: #333333;
+  margin: 5px;
+  padding: 15px;
+  border-radius: 15px;
+  box-shadow: 2px 1px 5px #111111;
   flex: 1 1 0;
   overflow-y: auto;
   overflow-x: hidden;
-  border: 1px solid;
+}
+
+.historyRow:nth-child(odd) {
+  background-color: #444444;
+}
+
+.historyRow {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 4fr) minmax(0, 1fr) minmax(0, 4fr);
+  padding: 5px;
+}
+
+.historyIndex {
+  font-size: small;
+  align-self: flex-end;
+}
+
+.historyMove {
+  padding-left: 20%;
+  font-weight: bold;
 }
 
 .chat {
+  background: #333333;
+  margin: 5px;
+  padding: 10px;
+  border-radius: 15px;
+  box-shadow: 2px 1px 5px #111111;
   flex: 1 1 0;
   display: flex;
   flex-direction: column;
   min-height: 0;
-  border: 1px solid;
 }
 
 .chatHistory {
@@ -128,10 +199,26 @@
   padding-left: 0;
 }
 
+.chatMessage:nth-child(odd) {
+  background-color: #444444;
+}
+
 .chatMessage {
   font-size: small;
+  padding: 5px;
+}
+
+.chatSender {
+  font-weight: bold;
 }
 
 .chatBox {
   flex-grow: 0;
+  background: #555555;
+  border-radius: 15px;
+  border: 0;
+  border-top: 1px #555555;
+  padding: 10px;
+  margin: 3px;
+  color: #eeeeee;
 }
