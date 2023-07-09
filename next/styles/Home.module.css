@@ -1,0 +1,73 @@
+.gameOptionsContainer {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100vw;
+    height: 100vh;
+}
+
+.gameOptions {
+    background-color: #111111;
+    border-radius: 15px;
+    padding: 10px;
+    box-shadow: 2px 1px 5px #111111;
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 30%
+}
+
+.labelSelect {
+    box-sizing: border-box;
+    display: flex;
+    align-items: center;
+    width: 100%;
+    padding: 5px;
+}
+
+.labelSelect > label {
+    box-sizing: border-box;
+    flex: 0 0 50%;
+    text-align: right;
+    margin-right: 5px;
+    font-size: small;
+    color: #cccccc;
+}
+
+.labelSelect > select {
+    box-sizing: border-box;
+    justify-self: left;
+    margin-left: 5px;
+    font-weight: bold;
+}
+
+.select {
+    box-sizing: border-box;
+    background-color: #333333;
+    transition: background-color 50ms;
+    border: 1px solid #555555;
+    color: #eeeeee;
+    padding: 5px;
+}
+
+.select:hover {
+    background-color: #555555;
+}
+
+.createGameButton {
+    box-sizing: border-box;
+    background-color: #555555;
+    transition: background-color 50ms;
+    border: 1px solid #333333;
+    border-radius: 15px;
+    color: #eeeeee;
+    padding: 10px;
+    margin: 10px;
+    font-size: medium;
+    font-weight: bold;
+}
+
+.createGameButton:hover {
+    background-color: #777777;
+}
