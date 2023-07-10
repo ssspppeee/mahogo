@@ -20,12 +20,14 @@ type ChatMessage = {
 
 function Square({ 
   value, 
+  latestMove,
   playerMarkedDead, 
   opponentMarkedDead, 
   territory,
   onSquareClick 
 }: {
   value: Go.Cell, 
+  latestMove: boolean,
   playerMarkedDead: boolean, 
   opponentMarkedDead: boolean, 
   territory: Go.Cell,
@@ -35,6 +37,7 @@ function Square({
   return (
     <button className={styles.square} onClick={onSquareClick}>
       { (imgfn === '') ? null : (<img className={styles.piece} src={"/" + imgfn} />) }
+      { latestMove ? (<div className={value === Go.Cell.Black ? styles.latestMoveMarkerBlack : styles.latestMoveMarkerWhite}></div>) : null }
       { playerMarkedDead ? (<div className={styles.playerMarkedDead}>X</div>) : null }
       { opponentMarkedDead ? (<div className={styles.opponentMarkedDead}>X</div>) : null }
       { (territory === Go.Cell.Empty) ? null : (<div className={territory === Go.Cell.Black ? styles.blackTerritory : styles.whiteTerritory}>o</div>) }
@@ -46,6 +49,7 @@ function Board({
   xIsNext, 
   gameStage,
   board, 
+  latestMove,
   playerMarkedDead, 
   opponentMarkedDead, 
   territory,
@@ -56,6 +60,7 @@ function Board({
   xIsNext: boolean, 
   gameStage: GameStage,
   board: Go.Board,
+  latestMove: number,
   playerMarkedDead: boolean[],
   opponentMarkedDead: boolean[],
   territory: Go.Cell[],
@@ -91,7 +96,7 @@ function Board({
   }
 
   const squares = [...Array(gridSize*gridSize).keys()].map((i) => {
-    return <Square key={i} value={board.board[i]} playerMarkedDead={playerMarkedDead[i]} opponentMarkedDead={opponentMarkedDead[i]} territory={territory[i]} onSquareClick={() => handleClick(i)} />
+    return <Square key={i} value={board.board[i]} latestMove={latestMove === i} playerMarkedDead={playerMarkedDead[i]} opponentMarkedDead={opponentMarkedDead[i]} territory={territory[i]} onSquareClick={() => handleClick(i)} />
   });
 
   return (
@@ -147,17 +152,17 @@ function Chat({ messageHistory, sendMessage }: {messageHistory: ChatMessage[], s
 function PlayerTimer({score}: {score: number}) {
   return (
     <div className={`${styles.playerTimer} ${styles.timer}`}>
-      <span>--:--</span>
-      <span>{score}</span>
+      <div className={styles.time}>--:--</div>
+      <div className={`${styles.score} ${styles.playerScore}`}><span>Points: {score}</span></div>
     </div>
   );
-}
+ }
 
 function OpponentTimer({score}: {score: number}) {
   return (
     <div className={`${styles.opponentTimer} ${styles.timer}`}>
-      <span>--:--</span>
-      <span>{score}</span>
+      <div className={`${styles.score} ${styles.opponentScore}`}><span>Points: {score}</span></div>
+      <div className={styles.time}>--:--</div>
     </div>
   );
 }
@@ -200,7 +205,7 @@ function History({moves, gridSize}: {moves: any[], gridSize: number}) {
 
 function Game({ gameID }: {gameID: string}) {
   const [websocket, setWebsocket] = useState(null);
-  const [playerType, setPlayerType] = useState<string>(null);
+  const [playerType, setPlayerType] = useState<number>(null);
   const [gridSize, setGridSize] = useState<number>(null);
   const [handicap, setHandicap] = useState<number>(null);
   const [komi, setKomi] = useState<number>(null);
@@ -219,11 +224,11 @@ function Game({ gameID }: {gameID: string}) {
   const [opponentConfirmedDead, setOpponentConfirmedDead] = useState<boolean>(false);
   const [territory, setTerritory] = useState<Go.Cell[]>(null);
   let playerScore, opponentScore;
-  if (playerType === "black") {
+  if (playerType === 0) {
     playerScore = blackScore;
     opponentScore = whiteScore;
   }
-  else if (playerType === "white") {
+  else if (playerType === 1) {
     playerScore = whiteScore;
     opponentScore = blackScore;
   }
@@ -247,6 +252,8 @@ function Game({ gameID }: {gameID: string}) {
       setGridSize(_ => boardSize);
       setHandicap(_ => handicap);
       setKomi(_ => komi);
+      setBlackScore(0);
+      setWhiteScore(komi);
       let gridSize = boardSize;
       setHistory(prevHistory => [new Go.Board(Array(gridSize*gridSize).fill(Go.Cell.Empty))]);
       setPlayerMarkedDead(prevPlayerMarkedDead => Array(gridSize*gridSize).fill(false));
@@ -375,12 +382,23 @@ function Game({ gameID }: {gameID: string}) {
       <div className={styles.gameBoard}>
         <div className={styles.tableTop}>
           <div className={styles.boardAndTimers}>
-            <Board xIsNext={xIsNext} gameStage={gameStage} board={currentBoard} playerMarkedDead={playerMarkedDead} opponentMarkedDead={opponentMarkedDead} territory={territory} onPlay={handlePlay} onMarkDead={handleMarkDead} gridSize={gridSize} />
+            <Board xIsNext={xIsNext} gameStage={gameStage} board={currentBoard} latestMove={moveHistory[currentMove-1]} playerMarkedDead={playerMarkedDead} opponentMarkedDead={opponentMarkedDead} territory={territory} onPlay={handlePlay} onMarkDead={handleMarkDead} gridSize={gridSize} />
             <div className={styles.timers}>
-              <OpponentTimer score={opponentScore} />
-              <div></div>
-              <PassConfirmButton gameStage={gameStage} handlePass={handlePass} handleConfirmDead={handleConfirmDead} />
-              <PlayerTimer score={playerScore} />
+              <div className={styles.opponentInfo}>
+                <div className={styles.opponentNametag}>
+                  <img height="20" width="20" src={playerType === 0 ? "/white_piece.svg" : "/black_piece.svg"} />
+                  <div>Anonymous</div>
+                </div>
+                <OpponentTimer score={opponentScore} />
+              </div>
+              <div className={styles.playerInfo}>
+                <PlayerTimer score={playerScore} />
+                <PassConfirmButton gameStage={gameStage} handlePass={handlePass} handleConfirmDead={handleConfirmDead} />
+                <div className={styles.playerNametag}>
+                  <div>Anonymous</div>
+                  <img height="20" width="20" src={playerType === 0 ? "/black_piece.svg" : "/white_piece.svg"} />
+                </div>
+              </div>
             </div>
           </div>
         </div>

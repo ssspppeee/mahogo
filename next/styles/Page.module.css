@@ -1,6 +1,6 @@
 .page {
   display: grid;
-  grid-template-columns: 200px 1fr;
+  grid-template-columns: 100px 1fr;
 }
 
 .placeholder {
@@ -11,11 +11,33 @@
 
 .timer {
   display: flex;
+  flex-direction: column;
   justify-content: center;
   align-items: center;
   background-color: #555555;
+}
+
+.time {
   font-size: xx-large;
-  padding: 10px;
+}
+
+.score {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-size: small;
+  white-space: nowrap;
+  width: 100%;
+  padding-top: 5px;
+  padding-bottom: 5px;
+}
+
+.playerScore {
+  border-top: 3px solid #333333;
+}
+
+.opponentScore {
+  border-bottom: 3px solid #333333;
 }
 
 .sidebar {
@@ -61,9 +83,54 @@
 .timers {
   box-sizing: border-box;
   display: grid;
-  grid-template-rows: 4fr 7fr 1fr 4fr;
+  grid-template-rows: 1fr 1fr;
   border: 0px;
   padding-left: 15px;
+}
+
+.playerTimer {
+  border-bottom-left-radius: 5px;
+  border-bottom-right-radius: 5px;
+}
+
+.opponentTimer {
+  border-top-left-radius: 5px;
+  border-top-right-radius: 5px;
+}
+
+.playerInfo {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  margin-top: 10px;
+}
+
+.opponentInfo {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+
+.playerNametag {
+  background-color: #555555;
+  font-size: small;
+  padding: 5px;
+  border-radius: 10px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.opponentNametag {
+  background-color: #555555;
+  font-size: small;
+  padding: 5px;
+  border-radius: 10px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-self: flex-start;
 }
 
 .boardContainer9x9 {
@@ -148,7 +215,30 @@
   height: 100%;
   width: 100%;
   object-fit: cover;
-  position: relative;
+  position: absolute;
+  transform: translate(-50%, -50%);
+}
+
+.latestMoveMarkerBlack {
+  position: absolute;
+  height: 33%;
+  width: 33%;
+  background-color: #FFFFFF;
+  border-radius: 33%;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+}
+
+.latestMoveMarkerWhite {
+  position: absolute;
+  height: 33%;
+  width: 33%;
+  background-color: #000000;
+  border-radius: 33%;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
 }
 
 .playerMarkedDead {
