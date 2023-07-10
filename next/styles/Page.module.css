@@ -66,19 +66,53 @@
   padding-left: 15px;
 }
 
-.boardContainer {
+.boardContainer9x9 {
   box-sizing: border-box;
   aspect-ratio: 1 / 1;
   height: 100%;
   background-image: url('/board9x9.svg');
   background-size: 100% 100%;
-  padding: 0.8%;
+  padding: 1.087%; /* board svg is 50px per square with 5px at each end, hence 5 / (50*9 + 10) = 1.087% */
 }
 
-.board {
+.board9x9 {
   display: grid;
   grid-template-rows: repeat(9, minmax(0, 1fr));
   grid-template-columns: repeat(9, minmax(0, 1fr));
+  max-height: 100%;
+  max-width: 100%;
+}
+
+.boardContainer13x13 {
+  box-sizing: border-box;
+  aspect-ratio: 1 / 1;
+  height: 100%;
+  background-image: url('/board13x13.svg');
+  background-size: 100% 100%;
+  padding: 0.758%; /* board svg is 50px per square with 5px at each end, hence 5 / (50*13 + 10) = 0.758% */
+}
+
+.board13x13 {
+  display: grid;
+  grid-template-rows: repeat(13, minmax(0, 1fr));
+  grid-template-columns: repeat(13, minmax(0, 1fr));
+  max-height: 100%;
+  max-width: 100%;
+}
+
+.boardContainer19x19 {
+  box-sizing: border-box;
+  aspect-ratio: 1 / 1;
+  height: 100%;
+  background-image: url('/board19x19.svg');
+  background-size: 100% 100%;
+  padding: 0.521%; /* board svg is 50px per square with 5px at each end, hence 5 / (50*19 + 10) = 0.521% */
+}
+
+.board19x19 {
+  display: grid;
+  grid-template-rows: repeat(19, minmax(0, 1fr));
+  grid-template-columns: repeat(19, minmax(0, 1fr));
   max-height: 100%;
   max-width: 100%;
 }

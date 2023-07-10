@@ -1,6 +1,8 @@
 import { Cell, Move, Board } from "./Go";
 import { Redis } from "ioredis";
 
+const REDIS_HOST = "localhost"
+const REDIS_PORT = 6379
 function getPlayer(cell: Cell): Player { 
   if (cell === Cell.Black) {
     return Player.Black;
@@ -40,14 +42,32 @@ export class JoinMessage extends Message {
 
   async execute(backend: Backend, userConnection: UserConnection): Promise<void> {
     backend.subscribeToGame(this.gameID, userConnection);
+    let hostPlayer = await backend.getHostPlayer(this.gameID);
+    let boardSize = await backend.getBoardSize(this.gameID);
+    let handicap = await backend.getHandicap(this.gameID);
+    let komi = await backend.getKomi(this.gameID);
     let nConnections = await backend.getNumberOfConnections(this.gameID);
     if (nConnections === 0) {
-      backend.setPlayerID(this.gameID, Player.Black, userConnection.ID);
-      backend.publishPlayerType(this.gameID, userConnection, Player.Black);
+      backend.setPlayerID(this.gameID, hostPlayer, userConnection.ID);
+      backend.publishGameInfo(
+        this.gameID, 
+        userConnection, 
+        hostPlayer,
+        boardSize,
+        handicap,
+        komi
+      );
     }
     else if (nConnections === 1) {
-      backend.setPlayerID(this.gameID, Player.White, userConnection.ID);
-      backend.publishPlayerType(this.gameID, userConnection, Player.White);
+      backend.setPlayerID(this.gameID, hostPlayer === Player.Black ? Player.White : Player.Black, userConnection.ID);
+      backend.publishGameInfo(
+        this.gameID, 
+        userConnection, 
+        hostPlayer === Player.Black ? Player.White : Player.Black,
+        boardSize,
+        handicap,
+        komi
+      );
     }
     backend.incrementNumberOfConnections(this.gameID);
   }
@@ -264,7 +284,7 @@ class RedisUserConnection extends UserConnection {
 
   constructor(ID: string, onMessage: (channel: string, message: string) => void) {
     super(ID);
-    this.redis = new Redis(6379, "redis");
+    this.redis = new Redis(REDIS_PORT, REDIS_HOST);
     this.redis.on("message", onMessage);
   }
   subscribe(gameID: string) {
@@ -275,7 +295,11 @@ class RedisUserConnection extends UserConnection {
 
 export abstract class Backend {
   abstract isActiveGame(gameID: string): Promise<boolean>;
-  abstract createGame(gameID: string): void;
+  abstract createGame(gameID: string, boardSize: number, player: string, handicap: number, komi: number): void;
+  abstract getHostPlayer(gameID: string): Promise<Player>;
+  abstract getBoardSize(gameID: string): Promise<number>;
+  abstract getHandicap(gameID: string): Promise<number>;
+  abstract getKomi(gameID: string): Promise<number>;
   abstract getNumberOfConnections(gameID: string): Promise<number>;
   abstract incrementNumberOfConnections(gameID: string): void;
   abstract getPlayerID(gameID: string, player: Player): Promise<string>;
@@ -301,7 +325,7 @@ export abstract class Backend {
   abstract getDeadStones(gameID: string, player: Player): Promise<Position[]>;
   abstract sendChatMessage(gameID: string, player: Player, message: string): void;
   abstract createConnection(userID: string, onMessage: (channel: string, message: string) => void): UserConnection;
-  abstract publishPlayerType(gameID: string, userConnection: UserConnection, player: Player): void;
+  abstract publishGameInfo(gameID: string, userConnection: UserConnection, player: Player, boardSize: number, handicap: number, komi: number): void;
   abstract publishMove(gameID: string, move: Move, board: Board, blackScore: number, whiteScore: number): void;
   abstract publishPass(gameID: string, player: Player): void;
   abstract publishMarkDeadStage(gameID: string): void;
@@ -316,20 +340,27 @@ export class RedisBackend extends Backend {
 
   constructor() {
     super();
-    this.redis = new Redis(6379, "redis");
+    this.redis = new Redis(REDIS_PORT, REDIS_HOST);
   }
 
   async isActiveGame(gameID: string): Promise<boolean> {
     return await this.redis.get(gameID) !== null;
   }
 
-  createGame(gameID: string): void {
+  createGame(gameID: string, boardSize: number, player: string, handicap: number, komi: number): void{
+    if (player === "random") {
+      player = Math.random() < 0.5 ? "black" : "white";
+    }
     this.redis.mset(
        gameID,  1,
+       `${gameID}:boardSize`, boardSize,
+       `${gameID}:hostPlayer`, player === "black" ? Player.Black : Player.White,
+       `${gameID}:handicap`, handicap,
+       `${gameID}:komi`, komi,
        `${gameID}:numConnections`, 0,
        `${gameID}:nextPlayer`, Player.Black,
        `${gameID}:gameStage`, GameStage.Play,
-       `${gameID}:board`, "0".repeat(9*9)
+       `${gameID}:board`, "0".repeat(boardSize*boardSize)
     );
   }
 
@@ -341,6 +372,23 @@ export class RedisBackend extends Backend {
     else {
         return Number(nConnections);
     }
+  }
+
+  async getHostPlayer(gameID: string): Promise<Player> {
+    let hostPlayer = await this.redis.get(`${gameID}:hostPlayer`);
+    return hostPlayer === '0' ? Player.Black : Player.White;
+  }
+
+  async getBoardSize(gameID: string): Promise<number> {
+    return Number(await this.redis.get(`${gameID}:boardSize`));
+  }
+
+  async getHandicap(gameID: string): Promise<number> {
+    return Number(await this.redis.get(`${gameID}:handicap`));
+  }
+
+  async getKomi(gameID: string): Promise<number> {
+    return Number(await this.redis.get(`${gameID}:komi`));
   }
 
   incrementNumberOfConnections(gameID: string): void {
@@ -492,10 +540,13 @@ export class RedisBackend extends Backend {
     this.redis.publish(`${gameID}`, JSON.stringify({"type": "chatMessage", "message": message, "sender": playerString}));
   }
 
-  publishPlayerType(gameID: string, userConnection: UserConnection, player: Player): void {
+  publishGameInfo(gameID: string, userConnection: UserConnection, player: Player, boardSize: number, handicap: number, komi: number): void {
     this.redis.publish(`${gameID}:${userConnection.ID}`, JSON.stringify({
-      "type": "setPlayerType",
-      "player": player
+      "type": "setGameInfo",
+      "player": player,
+      "boardSize": boardSize,
+      "handicap": handicap,
+      "komi": komi
     }))
   }
 

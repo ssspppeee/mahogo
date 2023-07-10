@@ -14,6 +14,7 @@ services:
       context: sockets
     ports:
       - 8998:8998
+      - 8999:8999
     depends_on:
       - redis
     networks:

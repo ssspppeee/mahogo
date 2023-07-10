@@ -55,6 +55,14 @@
     background-color: #555555;
 }
 
+.select:focus {
+    background-color: #555555;
+}
+
+.select>option {
+    background-color: #555555;
+}
+
 .createGameButton {
     box-sizing: border-box;
     background-color: #555555;

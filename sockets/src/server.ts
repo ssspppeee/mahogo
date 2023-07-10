@@ -1,4 +1,5 @@
 import * as express from 'express';
+import * as cors from 'cors';
 import * as http from 'http';
 import * as crypto from "crypto";
 import { Server, Socket } from "socket.io";
@@ -6,6 +7,13 @@ import { Server, Socket } from "socket.io";
 import { Backend, ChatMessage, ConfirmDeadMessage, JoinMessage, MarkDeadMessage, MessageFactory, MoveMessage, PassMessage, RedisBackend} from "./backend";
 
 const app = express();
+app.use(cors());
+app.use(express.json());
+let corsOptions = {
+  origin: "http://localhost:3000",
+  methods: ["POST"],
+  optionsSuccessStatus: 200
+}
 const apiServer = http.createServer(app);
 const socketServer = http.createServer();
 const io = new Server(socketServer, {
@@ -143,13 +151,13 @@ socketServer.listen(8998, () => {
   console.log(`Socket server started on port ${8998}`);
 })
 
-apiServer.listen(8999, () => {
-  console.log(`API server started on port ${8999}`);
-});
-
-app.get('/api/createGame', (req, res) => {
+app.post('/api/createGame', (req, res) => {
   let gameID = randomID();
-  backend.createGame(gameID);
+  backend.createGame(gameID, req.body.boardSize, req.body.player, req.body.handicap, req.body.komi);
   console.log(`Create game: ${gameID}`);
   res.send(JSON.stringify({"gameID": gameID}));
 })
+
+app.listen(8999, () => {
+  console.log(`API server started on port ${8999} (CORS enabled)`);
+});

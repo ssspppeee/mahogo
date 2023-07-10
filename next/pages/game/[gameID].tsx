@@ -4,6 +4,9 @@ import { io } from "socket.io-client";
 import styles from 'styles/Page.module.css';
 import * as Go from "@/lib/Go";
 
+const BACKEND_HOST = "localhost";
+const BACKEND_PORT = 8998;
+
 enum GameStage {
   Play,
   MarkDead,
@@ -60,6 +63,20 @@ function Board({
   onMarkDead: (position: number) => void,
   gridSize: number
 }) {
+  let boardStyle, boardContainerStyle;
+  if (gridSize === 9) {
+    boardStyle = styles.board9x9;
+    boardContainerStyle = styles.boardContainer9x9;
+  }
+  else if (gridSize === 13) {
+    boardStyle = styles.board13x13;
+    boardContainerStyle = styles.boardContainer13x13;
+  }
+  else if (gridSize === 19) {
+    boardStyle = styles.board19x19;
+    boardContainerStyle = styles.boardContainer19x19;
+  }
+
   function handleClick(position: number) {
     if (gameStage === GameStage.MarkDead && board.board[position] != Go.Cell.Empty) {
       onMarkDead(position);
@@ -78,8 +95,8 @@ function Board({
   });
 
   return (
-    <div className={styles.boardContainer}>
-      <div className={styles.board}>
+    <div className={boardContainerStyle}>
+      <div className={boardStyle}>
         { squares }
       </div>
     </div>
@@ -166,7 +183,7 @@ function History({moves, gridSize}: {moves: any[], gridSize: number}) {
         whiteMove = (Math.floor(whiteValue / gridSize) + 1) + "-" + ((whiteValue % gridSize) + 1);
       }
       return (
-        <div className={styles.historyRow}>
+        <div className={styles.historyRow} key={idx}>
           <div className={styles.historyIndex}>{blackIdx + '.'}</div>
           <div className={styles.historyMove}>{blackMove}</div>
           <div className={styles.historyIndex}>{whiteIdx + '.'}</div>
@@ -183,8 +200,11 @@ function History({moves, gridSize}: {moves: any[], gridSize: number}) {
 
 function Game({ gameID }: {gameID: string}) {
   const [websocket, setWebsocket] = useState(null);
-  const gridSize = 9;
-  const [history, setHistory] = useState<Go.Board[]>([new Go.Board(Array(gridSize*gridSize).fill(Go.Cell.Empty))]);
+  const [playerType, setPlayerType] = useState<string>(null);
+  const [gridSize, setGridSize] = useState<number>(null);
+  const [handicap, setHandicap] = useState<number>(null);
+  const [komi, setKomi] = useState<number>(null);
+  const [history, setHistory] = useState<Go.Board[]>([]);
   const [moveHistory, setMoveHistory] = useState<number[]>([]);
   const [currentMove, setCurrentMove] = useState(0);
   const xIsNext = currentMove % 2 === 0;
@@ -193,12 +213,11 @@ function Game({ gameID }: {gameID: string}) {
   const [whiteScore, setWhiteScore] = useState<number>(0);
   const [messageHistory, setMessageHistory] = useState<ChatMessage[]>([]);
   const [gameStage, setGameStage] = useState<GameStage>(GameStage.Play);
-  const [playerMarkedDead, setPlayerMarkedDead] = useState<boolean[]>(Array(gridSize*gridSize).fill(false));
+  const [playerMarkedDead, setPlayerMarkedDead] = useState<boolean[]>(null);
   const [opponentMarkedDead, setOpponentMarkedDead] = useState<boolean[]>(Array(gridSize*gridSize).fill(false));
   const [confirmDeadButtonActive, setConfirmDeadButtonActive] = useState<boolean>(false);
   const [opponentConfirmedDead, setOpponentConfirmedDead] = useState<boolean>(false);
-  const [territory, setTerritory] = useState<Go.Cell[]>(Array(gridSize*gridSize).fill(Go.Cell.Empty));
-  const [playerType, setPlayerType] = useState<string>(null);
+  const [territory, setTerritory] = useState<Go.Cell[]>(null);
   let playerScore, opponentScore;
   if (playerType === "black") {
     playerScore = blackScore;
@@ -210,7 +229,7 @@ function Game({ gameID }: {gameID: string}) {
   }
 
   useEffect(() => {
-    const newWebsocket = io("http://localhost:8998");
+    const newWebsocket = io(`http://${BACKEND_HOST}:${BACKEND_PORT}`);
     setWebsocket(newWebsocket);
 
     newWebsocket.onAny((eventName, ...args) => {
@@ -223,8 +242,16 @@ function Game({ gameID }: {gameID: string}) {
       // TODO
     });
 
-    newWebsocket.once("setPlayerType", ({ player }) => {
+    newWebsocket.once("setGameInfo", ({ player, boardSize, handicap, komi }) => {
       setPlayerType(prevPlayer => player);
+      setGridSize(_ => boardSize);
+      setHandicap(_ => handicap);
+      setKomi(_ => komi);
+      let gridSize = boardSize;
+      setHistory(prevHistory => [new Go.Board(Array(gridSize*gridSize).fill(Go.Cell.Empty))]);
+      setPlayerMarkedDead(prevPlayerMarkedDead => Array(gridSize*gridSize).fill(false));
+      setOpponentMarkedDead(prevOpponentMarkedDead => Array(gridSize*gridSize).fill(false));
+      setTerritory(Array(gridSize*gridSize).fill(Go.Cell.Empty));
     });
 
     if (gameID) {
@@ -290,16 +317,18 @@ function Game({ gameID }: {gameID: string}) {
   }, [playerType]);
 
   useEffect(() => {
-    let flag = true;
-    for (let i=0; i < playerMarkedDead.length; i++) {
-      if (playerMarkedDead[i] != opponentMarkedDead[i]) {
-        flag = false;
-        setConfirmDeadButtonActive(false);
-        break;
+    if (gameStage === GameStage.MarkDead) {
+      let flag = true;
+      for (let i=0; i < playerMarkedDead.length; i++) {
+        if (playerMarkedDead[i] != opponentMarkedDead[i]) {
+          flag = false;
+          setConfirmDeadButtonActive(false);
+          break;
+        }
       }
-    }
-    if (flag) {
-      setConfirmDeadButtonActive(true);
+      if (flag) {
+        setConfirmDeadButtonActive(true);
+      }
     }
   }, [playerMarkedDead, opponentMarkedDead]);
 
