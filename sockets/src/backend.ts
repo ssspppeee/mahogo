@@ -358,6 +358,8 @@ export class RedisBackend extends Backend {
        `${gameID}:hostPlayer`, player === "black" ? Player.Black : Player.White,
        `${gameID}:handicap`, handicap,
        `${gameID}:komi`, komi,
+       `${gameID}:score:${Player.Black}`, 0,
+       `${gameID}:score:${Player.White}`, komi,
        `${gameID}:numConnections`, 0,
        `${gameID}:nextPlayer`, Player.Black,
        `${gameID}:gameStage`, GameStage.Play,
@@ -461,7 +463,7 @@ export class RedisBackend extends Backend {
   }
 
   updateScore(gameID: string, player: Player, score: number): void {
-    this.redis.set(`${gameID}:score:${player}`, score);
+    this.redis.incrbyfloat(`${gameID}:score:${player}`, score);
   }
 
   async getBoard(gameID: string): Promise<Board> {
