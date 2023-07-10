@@ -1,8 +1,9 @@
 import { Cell, Move, Board } from "./Go";
 import { Redis } from "ioredis";
 
-const REDIS_HOST = "localhost"
-const REDIS_PORT = 6379
+const REDIS_HOST = process.env.REDIS_HOST || "localhost";
+const REDIS_PORT = process.env.REDIS_PORT || "6379";
+
 function getPlayer(cell: Cell): Player { 
   if (cell === Cell.Black) {
     return Player.Black;
@@ -284,7 +285,7 @@ class RedisUserConnection extends UserConnection {
 
   constructor(ID: string, onMessage: (channel: string, message: string) => void) {
     super(ID);
-    this.redis = new Redis(REDIS_PORT, REDIS_HOST);
+    this.redis = new Redis(Number(REDIS_PORT), REDIS_HOST);
     this.redis.on("message", onMessage);
   }
   subscribe(gameID: string) {
@@ -340,7 +341,7 @@ export class RedisBackend extends Backend {
 
   constructor() {
     super();
-    this.redis = new Redis(REDIS_PORT, REDIS_HOST);
+    this.redis = new Redis(Number(REDIS_PORT), REDIS_HOST);
   }
 
   async isActiveGame(gameID: string): Promise<boolean> {

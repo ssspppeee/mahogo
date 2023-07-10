@@ -3,8 +3,8 @@ import { useRouter } from 'next/router';
 import { useState, useEffect, useImperativeHandle } from 'react';
 import styles from 'styles/Home.module.css';
 
-const BACKEND_HOST = "localhost";
-const BACKEND_PORT = 8999;
+const BACKEND_HOST = process.env.BACKEND_HOST || "localhost";
+const BACKEND_PORT = process.env.BACKEND_PORT || 8999;
 
 function GameOptions() {
   let router = useRouter();

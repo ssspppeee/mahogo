@@ -2,6 +2,9 @@ services:
   frontend:
     build:
       context: next
+    environment:
+      - BACKEND_HOST=backend
+      - BACKEND_PORT=8999
     ports:
       - 3000:3000
     networks:
@@ -12,6 +15,9 @@ services:
   backend:
     build:
       context: sockets
+    environment:
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
     ports:
       - 8998:8998
       - 8999:8999
