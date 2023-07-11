@@ -219,6 +219,15 @@
   transform: translate(-50%, -50%);
 }
 
+.deadPiece {
+  height: 100%;
+  width: 100%;
+  object-fit: cover;
+  position: absolute;
+  transform: translate(-50%, -50%);
+  opacity: 50%;
+}
+
 .latestMoveMarkerBlack {
   position: absolute;
   height: 33%;
@@ -243,23 +252,36 @@
 
 .playerMarkedDead {
   position: absolute;
-  color: blue;
-  top: 50%;
-  left: 33%;
+  height: 33%;
+  width: 33%;
+  background-color: #888888;
+  color: #000000;
+  font-weight: bold;
+  border-radius: 50%;
+  top: 67%;
+  left: 50%;
   transform: translate(-50%, -50%);
 }
 
 .opponentMarkedDead {
   position: absolute;
-  color: red;
-  top: 50%;
-  left: 66%;
+  height: 33%;
+  width: 33%;
+  background-color: #888888;
+  color: #000000;
+  font-weight: bold;
+  border-radius: 50%;
+  top: 33%;
+  left: 50%;
   transform: translate(-50%, -50%);
 }
 
 .blackTerritory {
   position: absolute;
-  color: black;
+  height: 33%;
+  width: 33%;
+  background-color: #000000;
+  border-radius: 33%;
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
@@ -267,7 +289,10 @@
 
 .whiteTerritory {
   position: absolute;
-  color: white;
+  height: 33%;
+  width: 33%;
+  background-color: #FFFFFF;
+  border-radius: 33%;
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);

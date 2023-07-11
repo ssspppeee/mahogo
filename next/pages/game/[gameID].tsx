@@ -21,6 +21,7 @@ type ChatMessage = {
 function Square({ 
   value, 
   latestMove,
+  gameStage,
   playerMarkedDead, 
   opponentMarkedDead, 
   territory,
@@ -28,6 +29,7 @@ function Square({
 }: {
   value: Go.Cell, 
   latestMove: boolean,
+  gameStage: GameStage,
   playerMarkedDead: boolean, 
   opponentMarkedDead: boolean, 
   territory: Go.Cell,
@@ -36,11 +38,11 @@ function Square({
   const imgfn = value === Go.Cell.Black ? 'black_piece.svg' : (value === Go.Cell.White ? 'white_piece.svg' : '');
   return (
     <button className={styles.square} onClick={onSquareClick}>
-      { (imgfn === '') ? null : (<img className={styles.piece} src={"/" + imgfn} />) }
+      { (imgfn === '') ? null : (<img className={(gameStage === GameStage.End && playerMarkedDead && opponentMarkedDead) ? styles.deadPiece : styles.piece} src={"/" + imgfn} />) }
       { latestMove ? (<div className={value === Go.Cell.Black ? styles.latestMoveMarkerBlack : styles.latestMoveMarkerWhite}></div>) : null }
-      { playerMarkedDead ? (<div className={styles.playerMarkedDead}>X</div>) : null }
-      { opponentMarkedDead ? (<div className={styles.opponentMarkedDead}>X</div>) : null }
-      { (territory === Go.Cell.Empty) ? null : (<div className={territory === Go.Cell.Black ? styles.blackTerritory : styles.whiteTerritory}>o</div>) }
+      { (gameStage === GameStage.MarkDead && playerMarkedDead) ? (<div className={styles.playerMarkedDead}>X</div>) : null }
+      { (gameStage === GameStage.MarkDead && opponentMarkedDead) ? (<div className={styles.opponentMarkedDead}>X</div>) : null }
+      { (territory === Go.Cell.Empty) ? null : (<div className={territory === Go.Cell.Black ? styles.blackTerritory : styles.whiteTerritory}></div>) }
     </button>
   );
 }
@@ -96,7 +98,7 @@ function Board({
   }
 
   const squares = [...Array(gridSize*gridSize).keys()].map((i) => {
-    return <Square key={i} value={board.board[i]} latestMove={latestMove === i} playerMarkedDead={playerMarkedDead[i]} opponentMarkedDead={opponentMarkedDead[i]} territory={territory[i]} onSquareClick={() => handleClick(i)} />
+    return <Square key={i} value={board.board[i]} gameStage={gameStage} latestMove={latestMove === i} playerMarkedDead={playerMarkedDead[i]} opponentMarkedDead={opponentMarkedDead[i]} territory={territory[i]} onSquareClick={() => handleClick(i)} />
   });
 
   return (
@@ -124,6 +126,13 @@ function Chat({ messageHistory, sendMessage }: {messageHistory: ChatMessage[], s
   }
 
   const messages = messageHistory.map((message, index) => {
+    if (message.sender === "server") {
+      return (
+        <li className={styles.chatMessage} key={index}>
+          <span className={styles.chatSender}>[server]: </span><span style={{fontWeight: "bold"}}>{message.message}</span>
+        </li>
+      );
+    }
     return (
       <li className={styles.chatMessage} key={index}>
         <span className={styles.chatSender}>{'[' + message.sender + "]: "}</span>{message.message}
@@ -171,7 +180,7 @@ function PassConfirmButton({gameStage, handlePass, handleConfirmDead}: {gameStag
   if (gameStage === GameStage.Play) {
     return <button className={styles.passButton} onClick={handlePass}>Pass</button>
   } else {
-    return <button className={styles.confirmDeadButton} onClick={handleConfirmDead}>Confirm dead groups</button>
+    return <button className={styles.passButton} onClick={handleConfirmDead}>Confirm dead groups</button>
   }
 }
 
@@ -180,12 +189,12 @@ function History({moves, gridSize}: {moves: any[], gridSize: number}) {
     .filter((value, idx) => idx % 2 == 0)
     .map((value, idx) => {
       let blackIdx = 2*idx + 1;
-      let blackMove = (Math.floor(value / gridSize) + 1) + "-" + ((value % gridSize) + 1);
+      let blackMove = value === -1 ? "Pass" : (Math.floor(value / gridSize) + 1) + "-" + ((value % gridSize) + 1);
       let whiteIdx = 2*idx + 2;
       let whiteMove;
       if (whiteIdx <= moves.length) {
         let whiteValue = moves[whiteIdx-1];
-        whiteMove = (Math.floor(whiteValue / gridSize) + 1) + "-" + ((whiteValue % gridSize) + 1);
+        whiteMove = whiteValue === -1 ? "Pass" : (Math.floor(whiteValue / gridSize) + 1) + "-" + ((whiteValue % gridSize) + 1);
       }
       return (
         <div className={styles.historyRow} key={idx}>
@@ -285,6 +294,7 @@ function Game({ gameID }: {gameID: string}) {
       });
       websocket.on("markDeadStage", () => {
         setGameStage(GameStage.MarkDead);
+        setMessageHistory(prevHistory => [...prevHistory.slice(), {message: "Both players have passed. Please mark dead stones." , sender: "server"}]);
       });
       websocket.on("markGroupDead", ({ player, group, mark }) => {
         console.log("playerType: ", playerType, "; player: ", player);
@@ -315,6 +325,7 @@ function Game({ gameID }: {gameID: string}) {
       websocket.on("end", ({ territory, blackScore, whiteScore }) => {
         setGameStage(GameStage.End);
         setTerritory(territory);
+        setMessageHistory(prevHistory => [...prevHistory.slice(), {message: `Game over\nBlack:\t${blackScore}\nWhite:\t${whiteScore}`, sender: "server"}]);
         console.log(`Game over\nBlack:\t${blackScore}\nWhite:\t${whiteScore}`);
       });
       websocket.on("chatMessage", ({ message, sender }) => {
