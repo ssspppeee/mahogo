@@ -13,7 +13,7 @@ export default function GamePage() {
   return (
     <div className={styles.page}>
       <Sidebar />
-      <Game gameID={gameID} key={gameID}/>
+      { gameID !== null ? <Game gameID={gameID} key={gameID}/> : null }
     </div>
   );
 }

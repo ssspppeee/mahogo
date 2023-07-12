@@ -84,7 +84,7 @@ export default function Game({ gameID }: {gameID: string}) {
         gameID
       );
     }
-  }, [gameID]);
+  }, []);
 
   useEffect(() => {
     if (websocket) {
