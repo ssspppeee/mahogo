@@ -19,6 +19,10 @@ const socketServer = http.createServer();
 const io = new Server(socketServer, {
   cors: {
     origin: "http://localhost:3000"
+  },
+  connectionStateRecovery: {
+    maxDisconnectionDuration: 5 * 60 * 1000,
+    skipMiddlewares: false
   }
 });
 
@@ -66,6 +70,7 @@ interface SessionSocket extends Socket{
 }
 
 io.use(async (socket: SessionSocket, next) => {
+  console.log("Session ID: ", socket.handshake.auth.sessionID);
   const sessionID = socket.handshake.auth.sessionID;
   if (sessionID) {
     const session = await sessionStorage.findSession(sessionID);

@@ -243,7 +243,13 @@ function Game({ gameID }: {gameID: string}) {
   }
 
   useEffect(() => {
-    const newWebsocket = io(`http://${BACKEND_HOST}:${BACKEND_PORT}`);
+    const newWebsocket = io(`http://${BACKEND_HOST}:${BACKEND_PORT}`, { autoConnect: false });
+    
+    const sessionID = sessionStorage.getItem("sessionID");
+    if (sessionID) {
+      newWebsocket.auth = { sessionID };
+    }
+    newWebsocket.connect();
     setWebsocket(newWebsocket);
 
     newWebsocket.onAny((eventName, ...args) => {
@@ -252,8 +258,9 @@ function Game({ gameID }: {gameID: string}) {
 
     newWebsocket.on("connect_error", (err) => { console.log(err.message) });
 
-    newWebsocket.on("session", () => {
-      // TODO
+    newWebsocket.on("session", ({sessionID}) => {
+      newWebsocket.auth = { sessionID };
+      sessionStorage.setItem("sessionID", sessionID);
     });
 
     newWebsocket.once("setGameInfo", ({ player, boardSize, handicap, komi }) => {
@@ -270,7 +277,7 @@ function Game({ gameID }: {gameID: string}) {
       setTerritory(Array(gridSize*gridSize).fill(Go.Cell.Empty));
     });
 
-    if (gameID) {
+    if (gameID && !sessionID) { // gameID is null on page load. sessionID will be non-null if refreshing, in which case we don't want to re-join
       newWebsocket.emit("join",
         gameID
       );
