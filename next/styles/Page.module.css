@@ -196,19 +196,20 @@
 }
 
 .passButton {
-  background-color: #555555;
-  border: 0;
+  background-color: #dcb35c;
+  border: 1px solid #222222;
   margin-bottom: 3px;
   transition: background-color 50ms;
-  color: #eeeeee;
+  color: #222222;
 }
 
 .passButton:hover {
-  background-color: #666666;
+  background-color: #fed57e;
 }
 
-.confirmDeadButton {
+.passButton:disabled {
   background-color: #333333;
+  color: #777777;
 }
 
 .piece {

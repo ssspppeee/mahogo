@@ -31,7 +31,7 @@ export default function Game({ gameID }: {gameID: string}) {
   const [gameStage, setGameStage] = useState<GameStage>(GameStage.Play);
   const [playerMarkedDead, setPlayerMarkedDead] = useState<boolean[]>(null);
   const [opponentMarkedDead, setOpponentMarkedDead] = useState<boolean[]>(Array(gridSize*gridSize).fill(false));
-  const [confirmDeadButtonActive, setConfirmDeadButtonActive] = useState<boolean>(false);
+  const [confirmDeadButtonActive, setConfirmDeadButtonActive] = useState<boolean>(true);
   const [opponentConfirmedDead, setOpponentConfirmedDead] = useState<boolean>(false);
   const [territory, setTerritory] = useState<Go.Cell[]>(null);
   let playerScore, opponentScore;
@@ -146,8 +146,10 @@ export default function Game({ gameID }: {gameID: string}) {
   useEffect(() => {
     if (gameStage === GameStage.MarkDead) {
       let flag = true;
-      for (let i=0; i < playerMarkedDead.length; i++) {
-        if (playerMarkedDead[i] != opponentMarkedDead[i]) {
+      let p = playerMarkedDead.slice().sort()
+      let o = opponentMarkedDead.slice().sort();
+      for (let i=0; i < p.length; i++) {
+        if (p[i] != o[i]) {
           flag = false;
           setConfirmDeadButtonActive(false);
           break;
@@ -213,7 +215,7 @@ export default function Game({ gameID }: {gameID: string}) {
               </div>
               <div className={styles.playerInfo}>
                 <PlayerTimer score={playerScore} />
-                <PassConfirmButton gameStage={gameStage} handlePass={handlePass} handleConfirmDead={handleConfirmDead} />
+                <PassConfirmButton gameStage={gameStage} active={gameStage !== GameStage.MarkDead || confirmDeadButtonActive} handlePass={handlePass} handleConfirmDead={handleConfirmDead} />
                 <div className={styles.playerNametag}>
                   <div>Anonymous</div>
                   <img height="20" width="20" src={playerType === 0 ? "/black_piece.svg" : "/white_piece.svg"} />

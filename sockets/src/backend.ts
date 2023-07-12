@@ -528,9 +528,9 @@ export class RedisBackend extends Backend {
   }
 
   async doDeadStonesMatch(gameID: string): Promise<boolean> {
-    let intersectionSize = await this.redis.sintercard(2, `${gameID}:deadStones:black`, `${gameID}:deadStones:white`)
-    let blackSize = await this.redis.scard(`${gameID}:deadStones:black`);
-    let whiteSize = await this.redis.scard(`${gameID}:deadStones:white`);
+    let intersectionSize = await this.redis.sintercard(2, `${gameID}:deadStones:${Player.Black}`, `${gameID}:deadStones:${Player.White}`)
+    let blackSize = await this.redis.scard(`${gameID}:deadStones:${Player.Black}`);
+    let whiteSize = await this.redis.scard(`${gameID}:deadStones:${Player.White}`);
     return blackSize === whiteSize && blackSize === intersectionSize;
   }
 
