@@ -46,17 +46,19 @@
 
 .game {
   display: grid;
-  grid-template-columns: minmax(0, 4fr) minmax(0, 1fr);
-  height: 100vh;
-  max-height: 100vh;
+  /* grid-template-columns: minmax(0, 4fr) minmax(0, 1fr); */
+  grid-template-columns: 1fr 250px;
+  /* height: 100vh; */
+  /* max-height: 100vh; */
   max-width: 100%;
 }
 
 .gameBoard {
   display: flex;
   justify-content: center;
-  max-height: 100vh;
-  height: 100vh;
+  /* max-height: 100vh; */
+  height: 100vh; 
+  min-height: 100vh;
   max-width: 100%;
 }
 
@@ -312,7 +314,7 @@
   padding: 15px;
   border-radius: 15px;
   box-shadow: 2px 1px 5px #111111;
-  flex: 1 1 0;
+  flex: 1 1 0; 
   overflow-y: auto;
   overflow-x: hidden;
 }
@@ -323,7 +325,8 @@
 
 .historyRow {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 4fr) minmax(0, 1fr) minmax(0, 4fr);
+  /* grid-template-columns: minmax(0, 1fr) minmax(0, 4fr) minmax(0, 1fr) minmax(0, 4fr); */
+  grid-template-columns: 1fr 4fr 1fr 4fr;
   padding: 5px;
 }
 
