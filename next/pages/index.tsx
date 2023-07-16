@@ -3,8 +3,8 @@ import { useRouter } from 'next/router';
 import { useState, useEffect, useImperativeHandle } from 'react';
 import styles from 'styles/Home.module.css';
 
-const BACKEND_HOST = process.env.BACKEND_HOST || "localhost";
-const BACKEND_PORT = process.env.BACKEND_PORT || 8999;
+const BACKEND_API_HOST = process.env.NEXT_PUBLIC_BACKEND_API_HOST || "backend";
+const BACKEND_API_PORT = process.env.NEXT_PUBLIC_BACKEND_API_PORT || "80";
 
 function GameOptions() {
   let router = useRouter();
@@ -65,7 +65,7 @@ function GameOptions() {
         className={styles.createGameButton}
         type="button"
         onClick={async () => {
-          let response = await fetch(`http://${BACKEND_HOST}:${BACKEND_PORT}/api/createGame`, {
+          let response = await fetch(`http://${BACKEND_API_HOST}:${BACKEND_API_PORT}/api/createGame`, {
             method: "POST",
             headers: {
               'Content-Type': 'application/json',

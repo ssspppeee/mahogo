@@ -1,0 +1,30 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: frontend-deployment
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: frontend
+  template:
+    metadata:
+      labels:
+        app: frontend
+    spec:
+      containers:
+        - name: frontend
+          image: registry.digitalocean.com/spe-registry/mahogo-frontend:latest
+          ports:
+            - containerPort: 3000
+          env:
+            - name: DOMAIN_NAME
+              value: http://24.144.64.64
+            - name: NEXT_PUBLIC_BACKEND_API_HOST
+              value: $(DOMAIN_NAME)
+            - name: NEXT_PUBLIC_BACKEND_API_PORT
+              value: "80"
+            - name: NEXT_PUBLIC_BACKEND_SOCKET_HOST
+              value: $(DOMAIN_NAME)
+            - name: NEXT_PUBLIC_BACKEND_SOCKET_PORT
+              value: "80"

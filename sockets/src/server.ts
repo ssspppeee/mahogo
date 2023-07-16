@@ -9,22 +9,18 @@ import { Backend, ChatMessage, ConfirmDeadMessage, JoinMessage, MarkDeadMessage,
 const app = express();
 app.use(cors());
 app.use(express.json());
-let corsOptions = {
-  origin: "http://localhost:3000",
-  methods: ["POST"],
-  optionsSuccessStatus: 200
-}
 const apiServer = http.createServer(app);
 const socketServer = http.createServer();
 const io = new Server(socketServer, {
   cors: {
-    origin: "http://localhost:3000"
+    origin: process.env.CORS_ORIGIN
   },
   connectionStateRecovery: {
     maxDisconnectionDuration: 5 * 60 * 1000,
     skipMiddlewares: false
-  }
-});
+  },
+  path: '/ws/socket.io/'
+}).of('/ws');
 
 type Session = {
   userID: string,

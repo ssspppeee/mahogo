@@ -10,8 +10,8 @@ import PassConfirmButton from './PassConfirmButton';
 import History from './History';
 import Chat from './Chat';
 
-const BACKEND_HOST = "localhost";
-const BACKEND_PORT = 8998;
+const BACKEND_SOCKET_HOST = process.env.NEXT_PUBLIC_BACKEND_SOCKET_HOST || "localhost";
+const BACKEND_SOCKET_PORT = process.env.NEXT_PUBLIC_BACKEND_SOCKET_PORT || "80";
 
 
 export default function Game({ gameID }: {gameID: string}) {
@@ -45,7 +45,7 @@ export default function Game({ gameID }: {gameID: string}) {
   }
 
   useEffect(() => {
-    const newWebsocket = io(`http://${BACKEND_HOST}:${BACKEND_PORT}`, { autoConnect: false });
+    const newWebsocket = io(`http://${BACKEND_SOCKET_HOST}:${BACKEND_SOCKET_PORT}/ws`, { autoConnect: false, path: '/ws/socket.io/'});
     
     const sessionID = sessionStorage.getItem("sessionID");
     if (sessionID) {

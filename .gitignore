@@ -4,3 +4,4 @@ dump.rdb
 .next/
 /package-lock.json
 /package.json
+coverage/
