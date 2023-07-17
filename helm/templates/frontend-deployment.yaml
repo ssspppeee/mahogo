@@ -17,14 +17,3 @@ spec:
           image: registry.digitalocean.com/mahogo-registry/mahogo-frontend:latest
           ports:
             - containerPort: 3000
-          env:
-            - name: DOMAIN_NAME
-              value: http://24.144.64.64
-            - name: NEXT_PUBLIC_BACKEND_API_HOST
-              value: $(DOMAIN_NAME)
-            - name: NEXT_PUBLIC_BACKEND_API_PORT
-              value: "80"
-            - name: NEXT_PUBLIC_BACKEND_SOCKET_HOST
-              value: $(DOMAIN_NAME)
-            - name: NEXT_PUBLIC_BACKEND_SOCKET_PORT
-              value: "80"

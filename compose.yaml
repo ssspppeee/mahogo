@@ -2,6 +2,11 @@ services:
   frontend:
     build:
       context: next
+      args:
+        backend_api_host: localhost
+        backend_api_port: 8999
+        backend_socket_host: localhost
+        backend_socket_port: 8998
     ports:
       - 3000:3000
     networks:
@@ -12,6 +17,8 @@ services:
   backend:
     build:
       context: sockets
+      args:
+        node_env: development
     environment:
       - REDIS_HOST=redis
       - REDIS_PORT=6379
@@ -29,8 +36,7 @@ services:
       - 8999
   redis:
     restart: always
-    build:
-      context: redis
+    image: redis:alpine
     networks:
       - backend-redis
     expose:

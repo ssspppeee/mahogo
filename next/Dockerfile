@@ -1,21 +1,26 @@
-# Use a Node.js base image
 FROM node:18-alpine
 
-# Set the working directory
+ARG backend_api_host
+ARG backend_api_port
+ARG backend_socket_host
+ARG backend_socket_port
+
 WORKDIR /app
 
-# Install dependencies
 COPY package.json package-lock.json ./
+
 RUN npm ci
 
-# Copy the application code
 COPY . .
 
-# Build the Next.js app
+# pass the args to Next.js .env.production to be compiled at build
+RUN echo "NEXT_PUBLIC_BACKEND_API_HOST=${backend_api_host}" > .env.production &&\
+    echo "NEXT_PUBLIC_BACKEND_API_PORT=${backend_api_port}" >> .env.production &&\
+    echo "NEXT_PUBLIC_BACKEND_SOCKET_HOST=${backend_socket_host}" >> .env.production &&\
+    echo "NEXT_PUBLIC_BACKEND_SOCKET_PORT=${backend_socket_port}" >> .env.production
+
 RUN npm run build
 
-# Expose the port used by Next.js
 EXPOSE 3000
 
-# Start the Next.js server
 CMD ["npm", "start"]
