@@ -1,0 +1,7 @@
+apiVersion: v2
+name: mahogo
+description: A Kubernetes-hosted Go (the board game) application
+
+type: application
+version: 0.1.0
+appVersion: "0.1.0"

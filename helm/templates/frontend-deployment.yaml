@@ -14,7 +14,7 @@ spec:
     spec:
       containers:
         - name: frontend
-          image: registry.digitalocean.com/spe-registry/mahogo-frontend:latest
+          image: registry.digitalocean.com/mahogo-registry/mahogo-frontend:latest
           ports:
             - containerPort: 3000
           env:
