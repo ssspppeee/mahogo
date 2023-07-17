@@ -5,3 +5,9 @@ dump.rdb
 /package-lock.json
 /package.json
 coverage/
+.terraform
+.terraform.lock.hcl
+terraform.tfstate
+terraform.tfstate.backup
+config_aws.sh
+config_do.sh
