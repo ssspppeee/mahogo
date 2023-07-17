@@ -4,8 +4,9 @@ import * as http from 'http';
 import * as crypto from "crypto";
 import { Server, Socket } from "socket.io";
 
-import { Backend, ChatMessage, ConfirmDeadMessage, JoinMessage, MarkDeadMessage, MessageFactory, MoveMessage, PassMessage, RedisBackend} from "./backend";
+import { Backend, ChatMessage, ConfirmDeadMessage, GameInfoMessage, JoinMessage, MarkDeadMessage, MessageFactory, MoveMessage, PassMessage, RedisBackend} from "./backend";
 
+console.log(`Environment: ${process.env.NODE_ENV || "development"}`);
 const app = express();
 app.use(cors());
 app.use(express.json());
@@ -121,6 +122,11 @@ io.on("connection", async (socket: SessionSocket) => {
     msg.execute(backend, userConnection);
   });
 
+  socket.on("gameInfo", (gameID) => {
+    let msg = new GameInfoMessage(gameID);
+    msg.execute(backend, userConnection);
+  });
+
   socket.on("move", (gameID, move) => {
     let msg = new MoveMessage(gameID, move);
     msg.execute(backend, userConnection);
@@ -160,5 +166,5 @@ app.post('/api/createGame', (req, res) => {
 })
 
 app.listen(8999, () => {
-  console.log(`API server started on port ${8999} (CORS enabled)`);
+  console.log(`API server started on port ${8999} (CORS enabled: origin ${process.env.CORS_ORIGIN})`);
 });

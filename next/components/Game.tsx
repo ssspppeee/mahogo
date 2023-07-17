@@ -35,6 +35,7 @@ export default function Game({ gameID }: {gameID: string}) {
   const [opponentConfirmedDead, setOpponentConfirmedDead] = useState<boolean>(false);
   const [territory, setTerritory] = useState<Go.Cell[]>(null);
   let playerScore, opponentScore;
+  console.log(`render game: gameID: ${gameID}`);
   if (playerType === 0) {
     playerScore = blackScore;
     opponentScore = whiteScore;
@@ -79,10 +80,18 @@ export default function Game({ gameID }: {gameID: string}) {
       setTerritory(Array(gridSize*gridSize).fill(Go.Cell.Empty));
     });
 
-    if (gameID && !sessionID) { // gameID is null on page load. sessionID will be non-null if refreshing, in which case we don't want to re-join
+    if (!sessionID) { // sessionID will be non-null if refreshing, in which case we don't want to re-join
       newWebsocket.emit("join",
         gameID
       );
+    }
+
+    newWebsocket.emit("gameInfo",
+      gameID
+    );
+
+    return () => {
+      newWebsocket.close()
     }
   }, []);
 

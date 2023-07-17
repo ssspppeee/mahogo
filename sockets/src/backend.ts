@@ -42,35 +42,59 @@ export class JoinMessage extends Message {
   }
 
   async execute(backend: Backend, userConnection: UserConnection): Promise<void> {
+    if (this.gameID === null) {
+      return;
+    }
     backend.subscribeToGame(this.gameID, userConnection);
-    let hostPlayer = await backend.getHostPlayer(this.gameID);
-    let boardSize = await backend.getBoardSize(this.gameID);
-    let handicap = await backend.getHandicap(this.gameID);
-    let komi = await backend.getKomi(this.gameID);
     let nConnections = await backend.getNumberOfConnections(this.gameID);
+    let hostPlayer = await backend.getHostPlayer(this.gameID);
     if (nConnections === 0) {
       backend.setPlayerID(this.gameID, hostPlayer, userConnection.ID);
-      backend.publishGameInfo(
-        this.gameID, 
-        userConnection, 
-        hostPlayer,
-        boardSize,
-        handicap,
-        komi
-      );
     }
     else if (nConnections === 1) {
       backend.setPlayerID(this.gameID, hostPlayer === Player.Black ? Player.White : Player.Black, userConnection.ID);
+    }
+    backend.incrementNumberOfConnections(this.gameID);
+  }
+}
+
+export class GameInfoMessage extends Message {
+  gameID: string;
+
+  constructor(gameID: string) {
+    super();
+    this.gameID = gameID;
+  }
+
+  async execute(backend: Backend, userConnection: UserConnection): Promise<void> {
+    let blackID = await backend.getPlayerID(this.gameID, Player.Black);
+    let whiteID = await backend.getPlayerID(this.gameID, Player.White); 
+    let boardSize = await backend.getBoardSize(this.gameID);
+    let handicap = await backend.getHandicap(this.gameID);
+    let komi = await backend.getKomi(this.gameID);
+    if (userConnection.ID === blackID) {
       backend.publishGameInfo(
         this.gameID, 
         userConnection, 
-        hostPlayer === Player.Black ? Player.White : Player.Black,
+        Player.Black,
         boardSize,
         handicap,
         komi
       );
     }
-    backend.incrementNumberOfConnections(this.gameID);
+    else if (userConnection.ID === whiteID) {
+      backend.publishGameInfo(
+        this.gameID, 
+        userConnection, 
+        Player.White,
+        boardSize,
+        handicap,
+        komi
+      );
+    }
+    else {
+      console.log("Warning: GameInfo not supported for spectators")
+    }
   }
 }
 
@@ -303,7 +327,7 @@ export abstract class Backend {
   abstract getKomi(gameID: string): Promise<number>;
   abstract getNumberOfConnections(gameID: string): Promise<number>;
   abstract incrementNumberOfConnections(gameID: string): void;
-  abstract getPlayerID(gameID: string, player: Player): Promise<string>;
+  abstract getPlayerID(gameID: string, player: Player): Promise<string | null>;
   abstract getNextPlayer(gameID: string): Promise<Player>;
   abstract updateNextPlayer(gameID: string): void;
   abstract getGameStage(gameID: string): Promise<GameStage>;
@@ -398,14 +422,9 @@ export class RedisBackend extends Backend {
     this.redis.incr(`${gameID}:numConnections`);
   }
 
-  async getPlayerID(gameID: string, player: Player): Promise<string> {
+  async getPlayerID(gameID: string, player: Player): Promise<string | null> {
     let playerID = await this.redis.get(`${gameID}:playerID:${player}`);
-    if (playerID === null) {
-      throw Error(`Player ID ${playerID} not found`);
-    }
-    else {
-      return playerID;
-    }
+    return playerID;
   }
 
   async getNextPlayer(gameID: string): Promise<Player> {
