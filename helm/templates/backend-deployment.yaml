@@ -20,7 +20,7 @@ spec:
             - containerPort: 8999
           env:
             - name: CORS_ORIGIN
-              value: http://137.184.241.62/
+              value: http://go.samesler.com
             - name: REDIS_HOST
               value: redis
             - name: REDIS_PORT
