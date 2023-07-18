@@ -48,9 +48,14 @@ export default function Game({ gameID }: {gameID: string}) {
   useEffect(() => {
     const newWebsocket = io(`http://${BACKEND_SOCKET_HOST}:${BACKEND_SOCKET_PORT}/ws`, { autoConnect: false, path: '/ws/socket.io/'});
     
-    const sessionID = sessionStorage.getItem("sessionID");
+    let sessionID = sessionStorage.getItem("sessionID");
     if (sessionID) {
-      newWebsocket.auth = { sessionID };
+      if (sessionStorage.getItem("gameID") === gameID) { // check that stored sessionID is for the current game - otherwise playing a new game in the same tab won't work
+        newWebsocket.auth = { sessionID };
+      }
+      else {
+        sessionID = null; // we are in a new game - annul session to trigger join
+      }
     }
     newWebsocket.connect();
     setWebsocket(newWebsocket);
@@ -64,6 +69,7 @@ export default function Game({ gameID }: {gameID: string}) {
     newWebsocket.on("session", ({sessionID}) => {
       newWebsocket.auth = { sessionID };
       sessionStorage.setItem("sessionID", sessionID);
+      sessionStorage.setItem("gameID", gameID); 
     });
 
     newWebsocket.once("setGameInfo", ({ player, boardSize, handicap, komi }) => {
