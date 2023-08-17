@@ -25,6 +25,10 @@ export class Board {
     return this.board.join('');
   }
 
+  static deserialise(str: string): Board {
+    return new Board(str.split('').map(Number));
+  }
+
   getNeighbours(position: number): number[] {
     let boardSize = Math.sqrt(this.board.length);
     let neighbours = [];

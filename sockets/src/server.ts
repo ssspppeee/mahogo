@@ -5,6 +5,11 @@ import * as crypto from "crypto";
 import { Server, Socket } from "socket.io";
 
 import { Backend, ChatMessage, ConfirmDeadMessage, GameInfoMessage, JoinMessage, MarkDeadMessage, MessageFactory, MoveMessage, PassMessage, RedisBackend} from "./backend";
+import { Redis } from 'ioredis';
+
+const REDIS_HOST = process.env.REDIS_HOST || "localhost";
+const REDIS_PORT = process.env.REDIS_PORT || "6379";
+const CORS_ORIGIN = process.env.CORS_ORIGIN || "http://localhost:3000";
 
 console.log(`Environment: ${process.env.NODE_ENV || "development"}`);
 const app = express();
@@ -14,7 +19,7 @@ const apiServer = http.createServer(app);
 const socketServer = http.createServer();
 const io = new Server(socketServer, {
   cors: {
-    origin: process.env.CORS_ORIGIN
+    origin: CORS_ORIGIN
   },
   connectionStateRecovery: {
     maxDisconnectionDuration: 5 * 60 * 1000,
@@ -30,9 +35,8 @@ type Session = {
 }
 
 abstract class SessionStore {
-  abstract findSession(id: string): Session;
+  abstract findSession(id: string): Promise<Session | null>;
   abstract saveSession(id: string, session: Session): void;
-  abstract findAllSessions(): Session[];
 }
 
 class InMemorySessionStore extends SessionStore {
@@ -43,19 +47,41 @@ class InMemorySessionStore extends SessionStore {
     this.sessions = new Map();
   }
 
-  findSession(id: string): Session {
-    return this.sessions.get(id)!;
+  async findSession(id: string): Promise<Session | null> {
+    return await this.sessions.get(id)!;
   }
 
   saveSession(id: string, session: Session): void {
     this.sessions.set(id, session);
   }
+}
 
-  findAllSessions(): Session[] {
-    return [...this.sessions.values()];
+class RedisSessionStore extends SessionStore {
+  redis: Redis;
+  
+  constructor() {
+    super();
+    this.redis = new Redis(Number(REDIS_PORT), REDIS_HOST);
+  } 
+
+  async findSession(id: string): Promise<Session | null> {
+    let userID = await this.redis.get(`${id}:userID`);
+    if (userID) {
+      return {
+        userID,
+        username: (await this.redis.get(`${id}:userName`))!,
+        connected: true
+      }
+    }
+    return null;
+  }
+
+  saveSession(id: string, session: Session): void {
+    this.redis.set(`${id}:userID`, session.userID);
+    this.redis.set(`${id}:username`, session.username);
   }
 }
-const sessionStorage = new InMemorySessionStore();
+const sessionStorage = new RedisSessionStore();
 const backend: Backend = new RedisBackend();
 
 const randomID = () => crypto.randomBytes(8).toString("hex");
@@ -108,11 +134,6 @@ io.on("connection", async (socket: SessionSocket) => {
 
   let userConnection = backend.createConnection(socket.userID!, handleMessageToClient); // null case handled by "use" middleware
 
-  socket.emit("session", {
-    sessionID: socket.sessionID,
-    userID: socket.userID
-  });
-
   socket.onAny((eventName, ...args) => {
     console.log(eventName, ...args);
   })
@@ -152,6 +173,11 @@ io.on("connection", async (socket: SessionSocket) => {
     msg.execute(backend, userConnection);
   });
 
+  socket.emit("session", {
+    sessionID: socket.sessionID,
+    userID: socket.userID
+  });
+
 })
 
 socketServer.listen(8998, () => {
@@ -166,5 +192,5 @@ app.post('/api/createGame', (req, res) => {
 })
 
 app.listen(8999, () => {
-  console.log(`API server started on port ${8999} (CORS enabled: origin ${process.env.CORS_ORIGIN})`);
+  console.log(`API server started on port ${8999} (CORS enabled: origin ${CORS_ORIGIN})`);
 });

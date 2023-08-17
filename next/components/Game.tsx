@@ -13,6 +13,10 @@ import Chat from './Chat';
 const BACKEND_SOCKET_HOST = process.env.NEXT_PUBLIC_BACKEND_SOCKET_HOST || "localhost";
 const BACKEND_SOCKET_PORT = process.env.NEXT_PUBLIC_BACKEND_SOCKET_PORT || "80";
 
+enum Player {
+  Black = 1, // for consistency with Cell where 0 is Empty
+  White
+}
 
 export default function Game({ gameID }: {gameID: string}) {
   const [websocket, setWebsocket] = useState(null);
@@ -24,7 +28,7 @@ export default function Game({ gameID }: {gameID: string}) {
   const [moveHistory, setMoveHistory] = useState<number[]>([]);
   const [currentMove, setCurrentMove] = useState(0);
   const xIsNext = currentMove % 2 === 0;
-  const currentBoard = history[currentMove];
+  const [currentBoard, setCurrentBoard] = useState(null);
   const [blackScore, setBlackScore] = useState<number>(0);
   const [whiteScore, setWhiteScore] = useState<number>(0);
   const [messageHistory, setMessageHistory] = useState<ChatMessage[]>([]);
@@ -36,18 +40,20 @@ export default function Game({ gameID }: {gameID: string}) {
   const [territory, setTerritory] = useState<Go.Cell[]>(null);
   let playerScore, opponentScore;
   console.log(`render game: gameID: ${gameID}`);
-  if (playerType === 0) {
+  if (playerType === Player.Black) {
     playerScore = blackScore;
     opponentScore = whiteScore;
   }
-  else if (playerType === 1) {
+  else if (playerType === Player.White) {
     playerScore = whiteScore;
     opponentScore = blackScore;
   }
 
   useEffect(() => {
+    console.log("Initialising socket")
     const newWebsocket = io(`http://${BACKEND_SOCKET_HOST}:${BACKEND_SOCKET_PORT}/ws`, { autoConnect: false, path: '/ws/socket.io/'});
-    
+    setWebsocket(newWebsocket);
+
     let sessionID = sessionStorage.getItem("sessionID");
     if (sessionID) {
       if (sessionStorage.getItem("gameID") === gameID) { // check that stored sessionID is for the current game - otherwise playing a new game in the same tab won't work
@@ -57,8 +63,6 @@ export default function Game({ gameID }: {gameID: string}) {
         sessionID = null; // we are in a new game - annul session to trigger join
       }
     }
-    newWebsocket.connect();
-    setWebsocket(newWebsocket);
 
     newWebsocket.onAny((eventName, ...args) => {
       console.log(eventName, ...args);
@@ -70,21 +74,48 @@ export default function Game({ gameID }: {gameID: string}) {
       newWebsocket.auth = { sessionID };
       sessionStorage.setItem("sessionID", sessionID);
       sessionStorage.setItem("gameID", gameID); 
+
+      console.log("emit gameinfo")
+      newWebsocket.emit("gameInfo",
+        gameID
+      );
     });
 
-    newWebsocket.once("setGameInfo", ({ player, boardSize, handicap, komi }) => {
+    newWebsocket.on("setGameInfo", ({ player, boardSize, handicap, komi, moveHistory, board, blackScore, whiteScore, blackMarkedDead, whiteMarkedDead, territory }) => {
       setPlayerType(prevPlayer => player);
       setGridSize(_ => boardSize);
       setHandicap(_ => handicap);
       setKomi(_ => komi);
-      setBlackScore(0);
-      setWhiteScore(komi);
+      setBlackScore(blackScore);
+      setWhiteScore(whiteScore);
+      setMoveHistory(moveHistory.map(m => m.position));
       let gridSize = boardSize;
-      setHistory(prevHistory => [new Go.Board(Array(gridSize*gridSize).fill(Go.Cell.Empty))]);
-      setPlayerMarkedDead(prevPlayerMarkedDead => Array(gridSize*gridSize).fill(false));
-      setOpponentMarkedDead(prevOpponentMarkedDead => Array(gridSize*gridSize).fill(false));
-      setTerritory(Array(gridSize*gridSize).fill(Go.Cell.Empty));
+      let history = [new Go.Board(Array(gridSize*gridSize).fill(Go.Cell.Empty))];
+      let tempBoard = history[0];
+      let index = 0;
+      for (let move of moveHistory) {
+        console.log(`Redoing history, move ${index}: `, move);
+        let newBoard = tempBoard.updateBoard(move).board;
+        console.log("Result: ", newBoard);
+        history.push(newBoard);
+        tempBoard = newBoard;
+        index += 1;
+      }
+      setHistory(prevHistory => history);
+      console.log(history);
+      setCurrentMove(moveHistory.length);
+      setCurrentBoard(Go.Board.deserialise(board));
+      if (player === Player.Black) {
+        setPlayerMarkedDead(blackMarkedDead);
+        setOpponentMarkedDead(whiteMarkedDead);
+      } else {
+        setPlayerMarkedDead(whiteMarkedDead);
+        setOpponentMarkedDead(blackMarkedDead);
+      }
+      setTerritory(territory === null ? Array(gridSize*gridSize).fill(Go.Cell.Empty) : territory);
     });
+
+    newWebsocket.connect();
 
     if (!sessionID) { // sessionID will be non-null if refreshing, in which case we don't want to re-join
       newWebsocket.emit("join",
@@ -92,11 +123,8 @@ export default function Game({ gameID }: {gameID: string}) {
       );
     }
 
-    newWebsocket.emit("gameInfo",
-      gameID
-    );
-
     return () => {
+      console.log("Closing socket");
       newWebsocket.close()
     }
   }, []);
@@ -110,6 +138,7 @@ export default function Game({ gameID }: {gameID: string}) {
           setBlackScore(prevBlackScore => blackScore);
           setWhiteScore(prevWhiteScore => whiteScore);
           setCurrentMove(prevMove => prevMove + 1);
+          setCurrentBoard(nextBoard);
       });
       websocket.on("pass", () => {
         setMoveHistory(prevMoveHistory => [...prevMoveHistory.slice(), -1]);
@@ -223,7 +252,7 @@ export default function Game({ gameID }: {gameID: string}) {
             <div className={styles.timers}>
               <div className={styles.opponentInfo}>
                 <div className={styles.opponentNametag}>
-                  <img height="20" width="20" src={playerType === 0 ? "/white_piece.svg" : "/black_piece.svg"} />
+                  <img height="20" width="20" src={playerType === Player.Black ? "/white_piece.svg" : "/black_piece.svg"} />
                   <div>Anonymous</div>
                 </div>
                 <OpponentTimer score={opponentScore} />
@@ -233,7 +262,7 @@ export default function Game({ gameID }: {gameID: string}) {
                 <PassConfirmButton gameStage={gameStage} active={gameStage !== GameStage.MarkDead || confirmDeadButtonActive} handlePass={handlePass} handleConfirmDead={handleConfirmDead} />
                 <div className={styles.playerNametag}>
                   <div>Anonymous</div>
-                  <img height="20" width="20" src={playerType === 0 ? "/black_piece.svg" : "/white_piece.svg"} />
+                  <img height="20" width="20" src={playerType === Player.Black ? "/black_piece.svg" : "/white_piece.svg"} />
                 </div>
               </div>
             </div>

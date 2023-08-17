@@ -1,3 +1,4 @@
+import e = require("express");
 import { Cell, Move, Board } from "./Go";
 import { Redis } from "ioredis";
 
@@ -17,7 +18,7 @@ function getPlayer(cell: Cell): Player {
 }
 
 enum Player {
-  Black,
+  Black = 1, // for consistency with Cell where 0 is Empty
   White
 }
 
@@ -45,7 +46,6 @@ export class JoinMessage extends Message {
     if (this.gameID === null) {
       return;
     }
-    backend.subscribeToGame(this.gameID, userConnection);
     let nConnections = await backend.getNumberOfConnections(this.gameID);
     let hostPlayer = await backend.getHostPlayer(this.gameID);
     if (nConnections === 0) {
@@ -67,34 +67,8 @@ export class GameInfoMessage extends Message {
   }
 
   async execute(backend: Backend, userConnection: UserConnection): Promise<void> {
-    let blackID = await backend.getPlayerID(this.gameID, Player.Black);
-    let whiteID = await backend.getPlayerID(this.gameID, Player.White); 
-    let boardSize = await backend.getBoardSize(this.gameID);
-    let handicap = await backend.getHandicap(this.gameID);
-    let komi = await backend.getKomi(this.gameID);
-    if (userConnection.ID === blackID) {
-      backend.publishGameInfo(
-        this.gameID, 
-        userConnection, 
-        Player.Black,
-        boardSize,
-        handicap,
-        komi
-      );
-    }
-    else if (userConnection.ID === whiteID) {
-      backend.publishGameInfo(
-        this.gameID, 
-        userConnection, 
-        Player.White,
-        boardSize,
-        handicap,
-        komi
-      );
-    }
-    else {
-      console.log("Warning: GameInfo not supported for spectators")
-    }
+    backend.subscribeToGame(this.gameID, userConnection);
+    backend.publishGameInfo(this.gameID, userConnection);
   }
 }
 
@@ -342,6 +316,7 @@ export abstract class Backend {
   abstract appendBoardToHistory(gameID: string, board:Board): void;
   abstract appendMoveToHistory(gameID: string, move: Move | null): void;
   abstract getNthLastMove(gameID: string, n: number): Promise<Move | null>;
+  abstract getMoveHistory(gameID: string): Promise<Move[]>;
   abstract isStoneMarkedDead(gameID: string, position: Position, player: Player): Promise<boolean>;
   abstract markGroupDead(gameID: string, group: Position[], player: Player, mark: boolean): void;
   abstract getHasConfirmedDeadStones(gameID: string, player: Player): Promise<boolean>;
@@ -350,7 +325,7 @@ export abstract class Backend {
   abstract getDeadStones(gameID: string, player: Player): Promise<Position[]>;
   abstract sendChatMessage(gameID: string, player: Player, message: string): void;
   abstract createConnection(userID: string, onMessage: (channel: string, message: string) => void): UserConnection;
-  abstract publishGameInfo(gameID: string, userConnection: UserConnection, player: Player, boardSize: number, handicap: number, komi: number): void;
+  abstract publishGameInfo(gameID: string, userConnection: UserConnection): Promise<void>; 
   abstract publishMove(gameID: string, move: Move, board: Board, blackScore: number, whiteScore: number): void;
   abstract publishPass(gameID: string, player: Player): void;
   abstract publishMarkDeadStage(gameID: string): void;
@@ -429,7 +404,7 @@ export class RedisBackend extends Backend {
 
   async getNextPlayer(gameID: string): Promise<Player> {
     let nextPlayer = await this.redis.get(`${gameID}:nextPlayer`);
-    return nextPlayer === '0' ? Player.Black : Player.White;
+    return nextPlayer === '1' ? Player.Black : Player.White;
   }
 
   async setNextPlayer(gameID:string, player: Player) {
@@ -524,6 +499,11 @@ export class RedisBackend extends Backend {
     }
   }
 
+  async getMoveHistory(gameID: string): Promise<Move[]> {
+    let moves = await this.redis.lrange(`${gameID}:moves`, 0, -1);
+    return moves.map((v, i) => new Move(Number(v), i % 2 === 0 ? Cell.Black : Cell.White))
+  }
+
   async isStoneMarkedDead(gameID: string, position: number, player: Player): Promise<boolean> {
     let markedDead = await this.redis.sismember(`${gameID}:deadStones:${player}`, position);
     return markedDead === 1
@@ -562,13 +542,41 @@ export class RedisBackend extends Backend {
     this.redis.publish(`${gameID}`, JSON.stringify({"type": "chatMessage", "message": message, "sender": playerString}));
   }
 
-  publishGameInfo(gameID: string, userConnection: UserConnection, player: Player, boardSize: number, handicap: number, komi: number): void {
+  async publishGameInfo(gameID: string, userConnection: UserConnection): Promise<void> {
+    let blackID = await this.getPlayerID(gameID, Player.Black);
+    let whiteID = await this.getPlayerID(gameID, Player.White); 
+    let player;
+    if (userConnection.ID === blackID) {
+      player = Player.Black;
+    } 
+    else if (userConnection.ID === whiteID) {
+      player = Player.White;
+    }
+    else {
+      console.log("Warning: GameInfo not supported for spectators")
+    }
+    let boardSize = await this.getBoardSize(gameID);
+    let handicap = await this.getHandicap(gameID);
+    let komi = await this.getKomi(gameID);
+    let moveHistory = await this.getMoveHistory(gameID);
+    let board = await this.getBoard(gameID);
+    let blackScore = await this.getScore(gameID, Player.Black);
+    let whiteScore = await this.getScore(gameID, Player.White);
+    let blackMarkedDead = await this.getDeadStones(gameID, Player.Black);
+    let whiteMarkedDead = await this.getDeadStones(gameID, Player.White);
     this.redis.publish(`${gameID}:${userConnection.ID}`, JSON.stringify({
       "type": "setGameInfo",
       "player": player,
       "boardSize": boardSize,
       "handicap": handicap,
-      "komi": komi
+      "komi": komi,
+      "moveHistory": moveHistory,
+      "board": board.serialise(),
+      "blackScore": blackScore,
+      "whiteScore": whiteScore,
+      "blackMarkedDead": blackMarkedDead,
+      "whiteMarkedDead": whiteMarkedDead,
+      "territory": null // TODO
     }))
   }
 
