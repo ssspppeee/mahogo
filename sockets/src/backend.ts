@@ -378,7 +378,7 @@ export class RedisBackend extends Backend {
 
   async getHostPlayer(gameID: string): Promise<Player> {
     let hostPlayer = await this.redis.get(`${gameID}:hostPlayer`);
-    return hostPlayer === '0' ? Player.Black : Player.White;
+    return hostPlayer === '1' ? Player.Black : Player.White;
   }
 
   async getBoardSize(gameID: string): Promise<number> {
