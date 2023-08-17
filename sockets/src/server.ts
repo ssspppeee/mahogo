@@ -84,7 +84,7 @@ class RedisSessionStore extends SessionStore {
 const sessionStorage = new RedisSessionStore();
 const backend: Backend = new RedisBackend();
 
-const randomID = () => crypto.randomBytes(8).toString("hex");
+const randomID = () => crypto.randomBytes(4).toString("base64url");
 
 interface SessionSocket extends Socket{
   sessionID?: string;
