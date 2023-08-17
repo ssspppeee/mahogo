@@ -84,7 +84,7 @@ class RedisSessionStore extends SessionStore {
 const sessionStorage = new RedisSessionStore();
 const backend: Backend = new RedisBackend();
 
-const randomID = () => crypto.randomBytes(4).toString("base64url");
+const randomID = (nBytes: number) => crypto.randomBytes(nBytes).toString("base64url");
 
 interface SessionSocket extends Socket{
   sessionID?: string;
@@ -108,8 +108,8 @@ io.use(async (socket: SessionSocket, next) => {
   if (!username) {
     username = "Anonymous";
   }
-  socket.sessionID = randomID();
-  socket.userID = randomID();
+  socket.sessionID = randomID(16);
+  socket.userID = randomID(16);
   socket.username = username;
   next();
 })
@@ -185,7 +185,7 @@ socketServer.listen(8998, () => {
 })
 
 app.post('/api/createGame', (req, res) => {
-  let gameID = randomID();
+  let gameID = randomID(4);
   backend.createGame(gameID, req.body.boardSize, req.body.player, req.body.handicap, req.body.komi);
   console.log(`Create game: ${gameID}`);
   res.send(JSON.stringify({"gameID": gameID}));
