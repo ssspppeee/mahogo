@@ -96,7 +96,16 @@ export default function Home() {
   return (
     <>
       <Head>
-        <title>mahogo</title>
+        <title>Play Go/Baduk/Weiqi online - no sign-up required!</title>
+        <meta
+          name="description"
+          content="Play the board game Go with a friend online by just sharing a link. No log-in or sign-up necessary."
+        />
+        <meta property="og:title" content="Play Go online | No sign-up needed" />
+        <meta
+          property="og:description"
+          content="Play the board game Go with a friend online by just sharing a link. No log-in or sign-up necessary."
+        />
       </Head>
       
       <main>
