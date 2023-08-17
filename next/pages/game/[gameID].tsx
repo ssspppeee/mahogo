@@ -1,3 +1,4 @@
+import Head from 'next/head';
 import { useRouter } from 'next/router';
 import Sidebar from 'components/Sidebar';
 import Game from 'components/Game';
@@ -13,6 +14,9 @@ export default function GamePage() {
   }
   return (
     <React.StrictMode>
+      <Head>
+        <title>Play Go online</title>
+      </Head>
       <div className={styles.page}>
         <Sidebar />
         { router.isReady ? <Game gameID={gameID} key={gameID}/> : null }
