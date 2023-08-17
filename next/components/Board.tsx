@@ -1,10 +1,11 @@
 import styles from 'styles/Page.module.css';
 import * as Go from "@/lib/Go";
-import { GameStage } from "@/lib/Utils";
+import { GameStage, Player } from "@/lib/Utils";
 import Square from "./Square";
 
 export default function Board({ 
-  xIsNext, 
+  player,
+  blackIsNext, 
   gameStage,
   board, 
   latestMove,
@@ -15,7 +16,8 @@ export default function Board({
   onMarkDead,
   gridSize 
 }: {
-  xIsNext: boolean, 
+  player: Player,
+  blackIsNext: boolean, 
   gameStage: GameStage,
   board: Go.Board,
   latestMove: number,
@@ -45,7 +47,7 @@ export default function Board({
       onMarkDead(position);
     }
     else if (gameStage === GameStage.Play) {
-      const move = new Go.Move(position, xIsNext ? Go.Cell.Black : Go.Cell.White);
+      const move = new Go.Move(position, blackIsNext ? Go.Cell.Black : Go.Cell.White);
       const nextBoard = board.updateBoard(move);
       if (nextBoard !== null) {
         onPlay(move);
@@ -54,7 +56,7 @@ export default function Board({
   }
 
   const squares = [...Array(gridSize*gridSize).keys()].map((i) => {
-    return <Square key={i} value={board.board[i]} gameStage={gameStage} latestMove={latestMove === i} playerMarkedDead={playerMarkedDead[i]} opponentMarkedDead={opponentMarkedDead[i]} territory={territory[i]} onSquareClick={() => handleClick(i)} />
+    return <Square key={i} value={board.board[i]} player={player} blackIsNext={blackIsNext} gameStage={gameStage} latestMove={latestMove === i} playerMarkedDead={playerMarkedDead[i]} opponentMarkedDead={opponentMarkedDead[i]} territory={territory[i]} onSquareClick={() => handleClick(i)} />
   });
 
   return (

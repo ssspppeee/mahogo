@@ -2,7 +2,7 @@ import { useState, useEffect, useImperativeHandle } from 'react';
 import { io } from "socket.io-client";
 import styles from 'styles/Page.module.css';
 import * as Go from "@/lib/Go";
-import { ChatMessage, GameStage } from '@/lib/Utils';
+import { Player, ChatMessage, GameStage } from '@/lib/Utils';
 import Board from './Board';
 import OpponentTimer from './OpponentTimer';
 import PlayerTimer from './PlayerTimer';
@@ -13,11 +13,6 @@ import Chat from './Chat';
 const BACKEND_SOCKET_HOST = process.env.NEXT_PUBLIC_BACKEND_SOCKET_HOST || "localhost";
 const BACKEND_SOCKET_PORT = process.env.NEXT_PUBLIC_BACKEND_SOCKET_PORT || "80";
 
-enum Player {
-  Black = 1, // for consistency with Cell where 0 is Empty
-  White
-}
-
 export default function Game({ gameID }: {gameID: string}) {
   const [websocket, setWebsocket] = useState(null);
   const [playerType, setPlayerType] = useState<number>(null);
@@ -27,7 +22,7 @@ export default function Game({ gameID }: {gameID: string}) {
   const [history, setHistory] = useState<Go.Board[]>([]);
   const [moveHistory, setMoveHistory] = useState<number[]>([]);
   const [currentMove, setCurrentMove] = useState(0);
-  const xIsNext = currentMove % 2 === 0;
+  const blackIsNext = currentMove % 2 === 0;
   const [currentBoard, setCurrentBoard] = useState(null);
   const [blackScore, setBlackScore] = useState<number>(0);
   const [whiteScore, setWhiteScore] = useState<number>(0);
@@ -248,7 +243,7 @@ export default function Game({ gameID }: {gameID: string}) {
       <div className={styles.gameBoard}>
         <div className={styles.tableTop}>
           <div className={styles.boardAndTimers}>
-            <Board xIsNext={xIsNext} gameStage={gameStage} board={currentBoard} latestMove={moveHistory[currentMove-1]} playerMarkedDead={playerMarkedDead} opponentMarkedDead={opponentMarkedDead} territory={territory} onPlay={handlePlay} onMarkDead={handleMarkDead} gridSize={gridSize} />
+            <Board player={playerType} blackIsNext={blackIsNext} gameStage={gameStage} board={currentBoard} latestMove={moveHistory[currentMove-1]} playerMarkedDead={playerMarkedDead} opponentMarkedDead={opponentMarkedDead} territory={territory} onPlay={handlePlay} onMarkDead={handleMarkDead} gridSize={gridSize} />
             <div className={styles.timers}>
               <div className={styles.opponentInfo}>
                 <div className={styles.opponentNametag}>
