@@ -46,7 +46,7 @@ jobs:
       run: doctl registry login --expiry-seconds 600
 
     - name: Push image to DigitalOcean Container Registry
-      run: docker push registry.digitalocean.com/mahogo-registry/mahogo-fronted:$(echo $GITHUB_SHA | head -c7)
+      run: docker push registry.digitalocean.com/mahogo-registry/mahogo-frontend:$(echo $GITHUB_SHA | head -c7)
 
   
   build-backend:
@@ -91,7 +91,7 @@ jobs:
   deploy:
 
     needs: [build-frontend, build-backend]
-    
+
     runs-on: ubuntu-latest
 
     defaults: 
