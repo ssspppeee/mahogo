@@ -99,6 +99,7 @@ jobs:
         working-directory: sockets
 
     steps:
+    - uses: actions/checkout@v3
     - name: Update frontend deployment file  
       run: TAG=$(echo $GITHUB_SHA | head -c7) && sed -i 's|<IMAGE_COMMIT_HASH>|'${TAG}'|' $GITHUB_WORKSPACE/helm/templates/frontend-deployment.yml
     - name: Update backend deployment file
