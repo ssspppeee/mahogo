@@ -101,9 +101,9 @@ jobs:
     steps:
     - uses: actions/checkout@v3
     - name: Update frontend deployment file  
-      run: TAG=$(echo $GITHUB_SHA | head -c7) && sed -i 's|<IMAGE_COMMIT_HASH>|'${TAG}'|' $GITHUB_WORKSPACE/helm/templates/frontend-deployment.yml
+      run: TAG=$(echo $GITHUB_SHA | head -c7) && sed -i 's|<IMAGE_COMMIT_HASH>|'${TAG}'|' $GITHUB_WORKSPACE/helm/templates/frontend-deployment.yaml
     - name: Update backend deployment file
-      run: TAG=$(echo $GITHUB_SHA | head -c7) && sed -i 's|<IMAGE_COMMIT_HASH>|'${TAG}'|' $GITHUB_WORKSPACE/helm/templates/backend-deployment.yml
+      run: TAG=$(echo $GITHUB_SHA | head -c7) && sed -i 's|<IMAGE_COMMIT_HASH>|'${TAG}'|' $GITHUB_WORKSPACE/helm/templates/backend-deployment.yaml
 
     - name: Save DigitalOcean kubeconfig with short-lived credentials
       run: doctl kubernetes cluster kubeconfig save --expiry-seconds 600 github-actions-k8s-mahogo
