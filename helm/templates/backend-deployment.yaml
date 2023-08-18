@@ -14,7 +14,7 @@ spec:
     spec:
       containers:
         - name: backend
-          image: registry.digitalocean.com/mahogo-registry/mahogo-backend:latest
+          image: registry.digitalocean.com/mahogo-registry/mahogo-backend:<IMAGE_COMMIT_HASH>
           ports:
             - containerPort: 8998
             - containerPort: 8999

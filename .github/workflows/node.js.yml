@@ -6,11 +6,50 @@ name: Node.js CI
 on:
   push:
     branches: [ "master" ]
-  pull_request:
-    branches: [ "master" ]
 
 jobs:
-  build:
+
+  build-frontend:
+
+    runs-on: ubuntu-latest
+
+    defaults: 
+      run:
+        working-directory: next
+
+    strategy:
+      matrix:
+        node-version: [18.x]
+        # See supported Node.js release schedule at https://nodejs.org/en/about/releases/
+
+    steps:
+    - uses: actions/checkout@v3
+    - name: Use Node.js ${{ matrix.node-version }}
+      uses: actions/setup-node@v3
+      with:
+        node-version: ${{ matrix.node-version }}
+        cache: 'npm'
+        cache-dependency-path: 'sockets/package-lock.json'
+    - run: npm ci
+    - run: npm run build --if-present
+    # - run: npm test
+  
+    - name: Build container image
+      run: docker build -t registry.digitalocean.com/mahogo-registry/mahogo-frontend:$(echo $GITHUB_SHA | head -c7) .
+
+    - name: Install doctl
+      uses: digitalocean/action-doctl@v2
+      with:
+        token: ${{ secrets.DIGITALOCEAN_ACCESS_TOKEN }}
+
+    - name: Log in to DigitalOcean Container Registry with short-lived credentials
+      run: doctl registry login --expiry-seconds 600
+
+    - name: Push image to DigitalOcean Container Registry
+      run: docker push registry.digitalocean.com/mahogo-registry/mahogo-fronted:$(echo $GITHUB_SHA | head -c7)
+
+  
+  build-backend:
 
     runs-on: ubuntu-latest
 
@@ -34,3 +73,44 @@ jobs:
     - run: npm ci
     - run: npm run build --if-present
     - run: npm test
+  
+    - name: Build container image
+      run: docker build -t registry.digitalocean.com/mahogo-registry/mahogo-backend:$(echo $GITHUB_SHA | head -c7) .
+
+    - name: Install doctl
+      uses: digitalocean/action-doctl@v2
+      with:
+        token: ${{ secrets.DIGITALOCEAN_ACCESS_TOKEN }}
+
+    - name: Log in to DigitalOcean Container Registry with short-lived credentials
+      run: doctl registry login --expiry-seconds 600
+
+    - name: Push image to DigitalOcean Container Registry
+      run: docker push registry.digitalocean.com/mahogo-registry/mahogo-backend:$(echo $GITHUB_SHA | head -c7)
+
+  deploy:
+
+    needs: [build-frontend, build-backend]
+    
+    runs-on: ubuntu-latest
+
+    defaults: 
+      run:
+        working-directory: sockets
+
+    steps:
+    - name: Update frontend deployment file  
+      run: TAG=$(echo $GITHUB_SHA | head -c7) && sed -i 's|<IMAGE_COMMIT_HASH>|'${TAG}'|' $GITHUB_WORKSPACE/helm/templates/frontend-deployment.yml
+    - name: Update backend deployment file
+      run: TAG=$(echo $GITHUB_SHA | head -c7) && sed -i 's|<IMAGE_COMMIT_HASH>|'${TAG}'|' $GITHUB_WORKSPACE/helm/templates/backend-deployment.yml
+
+    - name: Save DigitalOcean kubeconfig with short-lived credentials
+      run: doctl kubernetes cluster kubeconfig save --expiry-seconds 600 github-actions-k8s-mahogo
+
+    - name: Deploy to DigitalOcean Kubernetes
+      run: kubectl apply -f $GITHUB_WORKSPACE/helm/templates
+
+    - name: Verify deployment
+      run: kubectl rollout status deployment/mahogo-frontend
+    - name: Verify backend deployment
+      run: kubectl rollout status deployment/mahogo-backend
